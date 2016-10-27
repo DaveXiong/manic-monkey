@@ -36,6 +36,19 @@ public class ShutdownInstanceChaosType extends ChaosType {
         super(config, "ShutdownInstance");
     }
 
+    public boolean canApply(ChaosInstance instance) {
+    	CloudClient cloudClient = instance.getCloudClient();
+        String instanceId = instance.getInstanceId();
+
+        switch(cloudClient.getInstanceStatus(instanceId)){
+        case RUNNING: 
+        case SUSPENDED:
+        	return true;
+        default:
+        	return false;
+        }
+    }
+    
     /**
      * Shuts down the instance.
      */
