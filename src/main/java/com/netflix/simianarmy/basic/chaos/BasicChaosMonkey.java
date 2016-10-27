@@ -17,17 +17,49 @@
  */
 package com.netflix.simianarmy.basic.chaos;
 
-import com.google.common.collect.Lists;
-import com.netflix.simianarmy.*;
-import com.netflix.simianarmy.MonkeyRecorder.Event;
-import com.netflix.simianarmy.chaos.*;
-import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.Lists;
+import com.netflix.simianarmy.CloudClient;
+import com.netflix.simianarmy.FeatureNotEnabledException;
+import com.netflix.simianarmy.InstanceGroupNotFoundException;
+import com.netflix.simianarmy.MonkeyCalendar;
+import com.netflix.simianarmy.MonkeyConfiguration;
+import com.netflix.simianarmy.MonkeyRecorder.Event;
+import com.netflix.simianarmy.NotFoundException;
+import com.netflix.simianarmy.chaos.BlockAllNetworkTrafficChaosType;
+import com.netflix.simianarmy.chaos.BurnCpuChaosType;
+import com.netflix.simianarmy.chaos.BurnIoChaosType;
+import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
+import com.netflix.simianarmy.chaos.ChaosEmailNotifier;
+import com.netflix.simianarmy.chaos.ChaosInstance;
+import com.netflix.simianarmy.chaos.ChaosMonkey;
+import com.netflix.simianarmy.chaos.ChaosType;
+import com.netflix.simianarmy.chaos.DetachVolumesChaosType;
+import com.netflix.simianarmy.chaos.FailDnsChaosType;
+import com.netflix.simianarmy.chaos.FailDynamoDbChaosType;
+import com.netflix.simianarmy.chaos.FailEc2ChaosType;
+import com.netflix.simianarmy.chaos.FailS3ChaosType;
+import com.netflix.simianarmy.chaos.FillDiskChaosType;
+import com.netflix.simianarmy.chaos.KillProcessesChaosType;
+import com.netflix.simianarmy.chaos.NetworkCorruptionChaosType;
+import com.netflix.simianarmy.chaos.NetworkLatencyChaosType;
+import com.netflix.simianarmy.chaos.NetworkLossChaosType;
+import com.netflix.simianarmy.chaos.NullRouteChaosType;
+import com.netflix.simianarmy.chaos.ShutdownInstanceChaosType;
+import com.netflix.simianarmy.chaos.SshConfig;
+import com.netflix.simianarmy.chaos.StartInstanceChaosType;
 
 /**
  * The Class BasicChaosMonkey.
@@ -74,6 +106,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
         close.set(Calendar.HOUR, monkeyCalendar.closeHour());
 
         allChaosTypes = Lists.newArrayList();
+        allChaosTypes.add(new StartInstanceChaosType(cfg));
         allChaosTypes.add(new ShutdownInstanceChaosType(cfg));
         allChaosTypes.add(new BlockAllNetworkTrafficChaosType(cfg));
         allChaosTypes.add(new DetachVolumesChaosType(cfg));
