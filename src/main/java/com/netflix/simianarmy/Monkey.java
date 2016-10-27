@@ -17,10 +17,13 @@
  */
 package com.netflix.simianarmy;
 
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.netflix.simianarmy.MonkeyRecorder.Event;
+import com.netflix.simianarmy.chaos.ChaosMonkey.EventTypes;
 
 /**
  * The abstract Monkey class, it provides a minimal interface from which all monkeys must be derived.
@@ -147,6 +150,10 @@ public abstract class Monkey {
      * Start. Sets up the schedule for the monkey to run on.
      */
     public void start() {
+    	ctx.recorder().recordEvent(
+				ctx.recorder().newEvent(this.type(), EventTypes.START, null,
+						UUID.randomUUID().toString()));
+    	
         final Monkey me = this;
         ctx.scheduler().start(this, new Runnable() {
             @Override
@@ -164,6 +171,11 @@ public abstract class Monkey {
      * Stop. Removes the monkey from the schedule.
      */
     public void stop() {
+    	
+    	ctx.recorder().recordEvent(
+				ctx.recorder().newEvent(this.type(), EventTypes.STOP, null,
+						UUID.randomUUID().toString()));
+    	
         ctx.scheduler().stop(this);
     }
 
