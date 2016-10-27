@@ -38,6 +38,7 @@ package com.netflix.simianarmy;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.BasicConfiguration;
 import com.netflix.simianarmy.basic.BasicRecorderEvent;
+
 import org.jclouds.compute.ComputeService;
 import org.jclouds.domain.LoginCredentials;
 import org.jclouds.ssh.SshClient;
@@ -200,6 +201,17 @@ public class TestMonkeyContext implements Monkey.Context {
             public void setInstanceSecurityGroups(String instanceId, List<String> groupIds) {
                 throw new UnsupportedOperationException();
             }
+
+			@Override
+			public void startInstance(String instanceId) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public CLIENT_STATUS getInstanceStatus(String instanceId) {
+				return CLIENT_STATUS.UNKNOWN;
+			}
         };
     }
 
