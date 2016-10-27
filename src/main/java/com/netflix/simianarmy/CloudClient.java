@@ -17,12 +17,12 @@
  */
 package com.netflix.simianarmy;
 
+import java.util.List;
+import java.util.Map;
+
 import org.jclouds.compute.ComputeService;
 import org.jclouds.domain.LoginCredentials;
 import org.jclouds.ssh.SshClient;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * The CloudClient interface. This abstractions provides the interface that the monkeys need to interact with
@@ -30,6 +30,44 @@ import java.util.Map;
  */
 public interface CloudClient {
 
+	public static enum CLIENT_STATUS {
+		PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, TERMINATED,UNKNOWN;
+
+		public static CLIENT_STATUS parse(String name) {
+			for (CLIENT_STATUS status : CLIENT_STATUS.values()) {
+				if (status.toString().equalsIgnoreCase(name)) {
+					return status;
+				}
+			}
+
+			return null;
+		}
+	}
+	/**
+     * start instance.
+     *
+     * @param instanceId
+     *            the instance id
+     *
+     * @throws NotFoundException
+     *             if the instance no longer exists or was already started after the crawler discovered it then you
+     *             should get a NotFoundException
+     */
+	void startInstance(String instanceId);
+	
+	
+	/**
+     * get a instance instance
+     *
+     * @param instanceId
+     *            the instance id
+     *
+     * @throws NotFoundException
+     *             if the instance no longer exists or was already started after the crawler discovered it then you
+     *             should get a NotFoundException
+     */
+	CLIENT_STATUS getInstanceStatus(String instanceId);
+	
     /**
      * Terminates instance.
      *
