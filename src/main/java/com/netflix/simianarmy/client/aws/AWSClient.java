@@ -46,6 +46,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Module;
 import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.NotFoundException;
+
 import org.apache.commons.lang.Validate;
 import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
@@ -962,4 +963,15 @@ public class AWSClient implements CloudClient {
     public boolean canChangeInstanceSecurityGroups(String instanceId) {
         return null != getVpcId(instanceId);
     }
+
+	@Override
+	public void startInstance(String instanceId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public CLIENT_STATUS getInstanceStatus(String instanceId) {
+		return CLIENT_STATUS.UNKNOWN;
+	}
 }
