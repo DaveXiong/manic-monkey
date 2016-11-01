@@ -2,6 +2,7 @@ buildscript {
     repositories {
         jcenter()
     }
+  
 }
 
 plugins {
@@ -9,6 +10,8 @@ plugins {
     id 'net.saliman.cobertura' version '2.2.7'
     id 'com.github.hierynomus.license' version '0.11.0'
 }
+
+
 
 // Establish version and status
 ext.githubProjectName = 'SimianArmy'
@@ -27,6 +30,7 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
 dependencies {
+
     // for the VMWareClient
     compile 'com.cloudbees.thirdparty:vijava:5.0.0'
 
@@ -51,7 +55,17 @@ dependencies {
     compile 'org.springframework:spring-jdbc:4.2.5.RELEASE'
     compile 'com.zaxxer:HikariCP:2.4.7'
 
-    testCompile 'org.testng:testng:6.3.1'
+	compile 'com.google.api-client:google-api-client:1.22.0'
+	compile 'com.google.apis:google-api-services-compute:beta-rev40-1.22.0'
+	compile 'com.google.code.gson:gson:2.3.1'
+	
+	
+	providedCompile 'mysql:mysql-connector-java:5.1.36'
+	
+	compile fileTree(dir: 'libs', include: ['*.jar'])
+
+	testCompile 'junit:junit:4.12'
+    testCompile 'org.testng:testng:6.9.13.6'
     testCompile 'org.mockito:mockito-core:1.8.5'
 
     runtime 'org.slf4j:slf4j-log4j12:1.6.1'
