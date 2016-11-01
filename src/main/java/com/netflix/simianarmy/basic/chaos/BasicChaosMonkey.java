@@ -38,10 +38,10 @@ public class BasicChaosMonkey extends ChaosMonkey {
     private static final Logger LOGGER = LoggerFactory.getLogger(BasicChaosMonkey.class);
 
     /** The Constant NS. */
-    private static final String NS = "simianarmy.chaos.";
+    protected static final String NS = "simianarmy.chaos.";
 
     /** The cfg. */
-    private final MonkeyConfiguration cfg;
+    protected final MonkeyConfiguration cfg;
 
     /** The runs per day. */
     private final long runsPerDay;
@@ -55,7 +55,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
     // the value below is used as the termination probability.
     private static final double DEFAULT_MANDATORY_TERMINATION_PROBABILITY = 0.5;
 
-    private final List<ChaosType> allChaosTypes;
+    protected final List<ChaosType> allChaosTypes;
 
     /**
      * Instantiates a new basic chaos monkey.
@@ -74,7 +74,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
         close.set(Calendar.HOUR, monkeyCalendar.closeHour());
 
         allChaosTypes = Lists.newArrayList();
-        allChaosTypes.add(new ShutdownInstanceChaosType(cfg));
+        //allChaosTypes.add(new ShutdownInstanceChaosType(cfg));
         allChaosTypes.add(new BlockAllNetworkTrafficChaosType(cfg));
         allChaosTypes.add(new DetachVolumesChaosType(cfg));
         allChaosTypes.add(new BurnCpuChaosType(cfg));
@@ -185,7 +185,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
         }
     }
 
-    private void reportEventForSummary(EventTypes eventType, InstanceGroup group, String instanceId) {
+    protected void reportEventForSummary(EventTypes eventType, InstanceGroup group, String instanceId) {
         context().reportEvent(createEvent(eventType, group, instanceId));
     }
 
@@ -338,7 +338,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
         }
     }
 
-    private boolean isChaosMonkeyEnabled() {
+    protected boolean isChaosMonkeyEnabled() {
         String prop = NS + "enabled";
         if (cfg.getBoolOrElse(prop, true)) {
             return true;
@@ -347,7 +347,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
         return false;
     }
 
-    private InstanceGroup findInstanceGroup(String type, String name) {
+    protected InstanceGroup findInstanceGroup(String type, String name) {
         // Calling context().chaosCrawler().groups(name) causes a new crawl to get
         // the up to date information for the group name.
         for (InstanceGroup group : context().chaosCrawler().groups(name)) {
