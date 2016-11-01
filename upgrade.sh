@@ -20,17 +20,20 @@ RULE_ENGINE_CONFIG=$INSTALL_DIR/manic/WEB-INF/classes
 
 FETECH="git fetch --tags";
 CHECKOUT="git checkout $TAG";
-CLEAN="./gradew clean"
+CLEAN="./gradlew clean"
 COMPILE="./gradlew build -x test"
-UPGRADE_1="rm -rf $INSTALL_DIR/manic"
-UPGRADE_2="mkdir -p $INSTALL_DIR/manic"
-UPGRADE_3="unzip build/libs/*.war $INSTALL_DIR/manic/"
+UPGRADE_0="mkdir -p $INSTALL_DIR/manic/"
+UPGRADE_1="rm -rf $INSTALL_DIR/manic/*"
+UPGRADE_2="mkdir -p $INSTALL_DIR/manic/"
+UPGRADE_3="unzip build/libs/*.war -d $INSTALL_DIR/manic/"
 
-CP_CHAOS="cp $CONFIG_DIR/db.properties $RULE_ENGINE_CONFIG/chaos.properties"
-CP_CLIENT="cp $CONFIG_DIR/ldap.properties $RULE_ENGINE_CONFIG/client.properties"
-CP_SIMIANARMY="cp $CONFIG_DIR/engine.properties $RULE_ENGINE_CONFIG/simianarmy.properties"
+CP_CHAOS="cp $CONFIG_DIR/chaos.properties $RULE_ENGINE_CONFIG/chaos.properties"
+CP_CLIENT="cp $CONFIG_DIR/client.properties $RULE_ENGINE_CONFIG/client.properties"
+CP_SIMIANARMY="cp $CONFIG_DIR/simianarmy.properties $RULE_ENGINE_CONFIG/simianarmy.properties"
 TOMCAT_RESTART="service tomcat restart"
 TOMCAT_LOG="journalctl -flu tomcat"
+
+git stash
 
 $FETECH;
 if [ "$?" -ne 0 ]; then 
@@ -59,6 +62,13 @@ else
    echo "[OK] $COMPILE ";
 fi
 
+$UPGRADE_0;
+if [ "$?" -ne 0 ]; then 
+   echo "[FAILED] $UPGRADE0 ";
+   exit 1;
+else
+   echo "[OK] $UPGRADE0 ";
+fi
 
 $UPGRADE_1;
 if [ "$?" -ne 0 ]; then 
@@ -120,5 +130,5 @@ if [ "$ALLGOOD" -ne 0 ] ; then
 fi
 
 
-#$TOMCAT_RESTART;
-#$TOMCAT_LOG;
+$TOMCAT_RESTART;
+$TOMCAT_LOG;
