@@ -18,8 +18,6 @@
 package com.netflix.simianarmy.manic;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.MonkeyConfiguration;
@@ -74,21 +72,18 @@ public class StartInstanceChaosType extends ChaosType {
 	@Override
 	public void apply(ChaosInstance instance) {
 		CloudClient cloudClient = instance.getCloudClient();
-		String instanceId = instance.getInstanceId();
 
-		try {
-			Method method = cloudClient.getClass().getMethod("start", String.class);
-			if (method != null) {
-				method.invoke(cloudClient, instanceId);
+		if (cloudClient instanceof BasicClient) {
+			BasicClient gceClient = (BasicClient) cloudClient;
+			try {
+				gceClient.start(instance.getInstanceId());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} catch (NoSuchMethodException ex) {
-			ex.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
+			return;
 		}
+		throw new UnsupportedOperationException();
+
 	}
 }
