@@ -18,6 +18,7 @@ import com.netflix.simianarmy.InstanceGroupNotFoundException;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.chaos.BasicChaosMonkey;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
+import com.netflix.simianarmy.chaos.ChaosMonkey.EventTypes;
 import com.netflix.simianarmy.chaos.ChaosType;
 import com.netflix.simianarmy.chaos.ShutdownInstanceChaosType;
 import com.netflix.simianarmy.client.gcloud.BasicClient;
@@ -41,6 +42,8 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		allChaosTypes.add(new StartInstanceChaosType(cfg));
 
 		paused = ctx.configuration().getBoolOrElse(NS + "paused", true);
+
+		LOGGER.info("Manic Monkey is ready, version:" + Definitions.VERSION);
 	}
 
 	public enum ManicEventTypes implements EventType {
@@ -158,6 +161,11 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 			LOGGER.info(msg);
 			throw new FeatureNotEnabledException(msg);
 		}
+	}
+
+	protected void reportEventForSummary(EventTypes eventType, InstanceGroup group, String instanceId) {
+		super.reportEventForSummary(eventType, group, instanceId);
+
 	}
 
 }
