@@ -54,6 +54,7 @@ import com.netflix.simianarmy.chaos.ChaosType;
 import com.netflix.simianarmy.client.gcloud.BasicChaosCrawler;
 import com.netflix.simianarmy.client.gcloud.BasicClient;
 import com.netflix.simianarmy.client.gcloud.Gce.Instance;
+import com.netflix.simianarmy.manic.Definitions;
 import com.netflix.simianarmy.manic.ManicChaosMonkey;
 import com.sun.jersey.spi.resource.Singleton;
 
@@ -108,8 +109,11 @@ public class ManicMonkeyResource {
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 
 		gen.writeStartObject();
-		gen.writeStringField("version", "2.0.0");
+		gen.writeStringField("version", Definitions.VERSION);
 		gen.writeBooleanField("enabled", monkey.isChaosMonkeyEnabled());
+		long now = System.currentTimeMillis();
+		gen.writeNumberField("now", now);
+		gen.writeNumberField("uptime", now - Definitions.UP_AT);
 		gen.writeArrayFieldStart("actions");
 		for (ChaosType type : monkey.getChaosTypes()) {
 			gen.writeStartObject();
@@ -226,9 +230,9 @@ public class ManicMonkeyResource {
 	public Response getInstances(@PathParam("group") String group) throws IOException {
 
 		BasicClient client = (BasicClient) monkey.context().cloudClient();
-		
+
 		client.listGroups();
-		
+
 		List<Instance> instances = client.list(group);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -285,8 +289,21 @@ public class ManicMonkeyResource {
 			this.monkey.resume();
 			break;
 		}
-		Response.Status responseStatus = Response.Status.OK;
-		return Response.status(responseStatus).build();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		gen.writeStartObject();
+		gen.writeStringField("version", Definitions.VERSION);
+		gen.writeBooleanField("enabled", monkey.isChaosMonkeyEnabled());
+		long now = System.currentTimeMillis();
+		gen.writeNumberField("now", now);
+		gen.writeNumberField("uptime", now - Definitions.UP_AT);
+
+		gen.writeEndObject();
+
+		gen.close();
+		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
 	}
 
 	public static enum InstanceAction {
@@ -310,7 +327,6 @@ public class ManicMonkeyResource {
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
-		Response.Status responseStatus = Response.Status.OK;
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 		gen.writeStartObject();
@@ -321,7 +337,8 @@ public class ManicMonkeyResource {
 		gen.writeEndObject();
 		gen.close();
 		LOGGER.info("entity content is '{}'", baos.toString("UTF-8"));
-		return Response.status(responseStatus).entity(baos.toString("UTF-8")).build();
+		
+		return getInstances(group);
 	}
 
 	@POST
@@ -341,7 +358,7 @@ public class ManicMonkeyResource {
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
-		Response.Status responseStatus = Response.Status.OK;
+		//Response.Status responseStatus = Response.Status.OK;
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 
@@ -351,7 +368,8 @@ public class ManicMonkeyResource {
 
 		gen.close();
 		LOGGER.info("entity content is '{}'", baos.toString("UTF-8"));
-		return Response.status(responseStatus).entity(baos.toString("UTF-8")).build();
+		//return Response.status(responseStatus).entity(baos.toString("UTF-8")).build();
+		return getInstance(group,instance);
 	}
 
 	private Response.Status addTerminationEvent(String groupType, String groupName, ChaosType chaosType,
