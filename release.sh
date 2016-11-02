@@ -20,7 +20,7 @@ export RELEASE_BRANCH=$BRANCH
 export RELEASE_TAG=$TAG
 export RELEASE_TAG_PREFIX='MONKEY-'
 export RELEASE_PROJECT=$PROJECT
-export RELEASE_CHANNEL='#wfe-test'
+export RELEASE_CHANNEL='#manic-monkey'
 
 java -jar toolkit/release-java-LATEST.jar
 
