@@ -55,6 +55,8 @@ dependencies {
 	compile 'com.google.apis:google-api-services-compute:beta-rev40-1.22.0'
 	compile 'com.google.code.gson:gson:2.3.1'
 	
+	//compile 'javax.websocket:javax.websocket-api:1.1'
+	providedCompile 'javax:javaee-api:7.0'
 	
 	providedCompile 'mysql:mysql-connector-java:5.1.36'
 	
