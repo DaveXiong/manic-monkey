@@ -18,7 +18,6 @@ import com.netflix.simianarmy.InstanceGroupNotFoundException;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.chaos.BasicChaosMonkey;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
-import com.netflix.simianarmy.chaos.ChaosMonkey.EventTypes;
 import com.netflix.simianarmy.chaos.ChaosType;
 import com.netflix.simianarmy.chaos.ShutdownInstanceChaosType;
 import com.netflix.simianarmy.client.gcloud.BasicClient;
@@ -34,6 +33,10 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ManicChaosMonkey.class);
 
 	private boolean paused = false;
+	
+	private InstanceMonitor monitor;
+	
+	private Slack slack;
 
 	public ManicChaosMonkey(Context ctx) {
 		super(ctx);
@@ -43,6 +46,10 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 
 		paused = ctx.configuration().getBoolOrElse(NS + "paused", true);
 
+		monitor = new InstanceMonitor(this);
+		
+		slack = new Slack(this);
+		
 		LOGGER.info("Manic Monkey is ready, version:" + Definitions.VERSION);
 	}
 
@@ -74,15 +81,20 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	}
 
 	public synchronized void start() {
+		
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_START, null,
 				UUID.randomUUID().toString()));
 		super.start();
+		
+		monitor.start();
 	}
 
 	public synchronized void stop() {
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_STOP, null,
 				UUID.randomUUID().toString()));
 		super.stop();
+		
+		monitor.stop();
 	}
 
 	public boolean isGroupEnabled(InstanceGroup group) {
@@ -168,4 +180,23 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 
 	}
 
+	public Slack getSlack() {
+		return slack;
+	}
+
+	public void setSlack(Slack slack) {
+		this.slack = slack;
+	}
+
+	public InstanceMonitor getMonitor() {
+		return monitor;
+	}
+
+	public void setMonitor(InstanceMonitor monitor) {
+		this.monitor = monitor;
+	}
+	
+	
+
+	
 }
