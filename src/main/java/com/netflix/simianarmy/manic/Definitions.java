@@ -8,7 +8,7 @@ package com.netflix.simianarmy.manic;
  *
  */
 public interface Definitions {
-	String VERSION = "0.0.2";
+	String VERSION = "0.0.3";
 
 	long UP_AT = System.currentTimeMillis();
 }
