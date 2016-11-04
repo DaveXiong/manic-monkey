@@ -41,6 +41,7 @@ public class ManicEventRecorder extends RDSRecorder {
 			ManicEvent event = new ManicEvent(ManicEvent.Type.INSTANCE, command);
 			InstancePayload payload = new InstancePayload();
 			payload.setName(evt.id());
+			payload.setGroup(evt.field("groupName"));
 			event.setPayload(payload);
 
 			return event;
@@ -64,7 +65,6 @@ public class ManicEventRecorder extends RDSRecorder {
 
 			ManicEvent event = new ManicEvent(ManicEvent.Type.MONKEY, command);
 			InstancePayload payload = new InstancePayload();
-			payload.setName(evt.id());
 			event.setPayload(payload);
 
 			return event;
