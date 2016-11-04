@@ -23,7 +23,7 @@ public class ManicEvent {
 		STAUTS_UPDATE
 	}
 	private Type type;
-	private Command command;
+	private Command event;
 	private long createdAt;
 
 	private Payload payload;
@@ -31,7 +31,7 @@ public class ManicEvent {
 	public ManicEvent(Type type, Command command, long createdAt) {
 		super();
 		this.type = type;
-		this.command = command;
+		this.event = command;
 		this.createdAt = createdAt;
 	}
 
@@ -58,11 +58,11 @@ public class ManicEvent {
 	}
 
 	public Command getCommand() {
-		return command;
+		return event;
 	}
 
 	public void setCommand(Command command) {
-		this.command = command;
+		this.event = command;
 	}
 
 	public long getCreatedAt() {
