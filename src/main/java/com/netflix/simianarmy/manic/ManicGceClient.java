@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.api.services.compute.model.Tags;
 import com.netflix.simianarmy.MonkeyConfiguration;
 import com.netflix.simianarmy.basic.chaos.BasicInstanceGroup;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
@@ -29,7 +30,7 @@ public class ManicGceClient extends BasicClient {
 	private synchronized void updateCache() throws IOException {
 		updateCache(false);
 	}
-	
+
 	private synchronized void updateCache(boolean force) throws IOException {
 		if (force || cache.isEmpty() || (System.currentTimeMillis() - cacheUpdatedAt) >= CACHE_UPDATED_THTREDHOLD) {
 			cache.clear();
@@ -60,7 +61,9 @@ public class ManicGceClient extends BasicClient {
 		Set<String> tags = new HashSet<String>();
 
 		for (com.google.api.services.compute.model.Instance instance : getInstances()) {
-			tags.addAll(instance.getTags().getItems());
+			Tags tag = instance.getTags();
+			if (tag != null && tag.getItems() != null)
+				tags.addAll(tag.getItems());
 		}
 
 		for (String tag : tags) {
