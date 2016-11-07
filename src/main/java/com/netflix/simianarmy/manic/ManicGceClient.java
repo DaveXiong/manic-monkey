@@ -81,9 +81,12 @@ public class ManicGceClient extends BasicClient {
 		List<Instance> instances = new ArrayList<Instance>();
 
 		for (com.google.api.services.compute.model.Instance instance : getInstances()) {
-			if (instance.getTags().getItems().contains(group)) {
-				instances.add(new Instance(instance.getId().longValue(), instance.getName(),
-						Status.parse(instance.getStatus())));
+			Tags tag = instance.getTags();
+			if (tag != null && tag.getItems() != null) {
+				if (instance.getTags().getItems().contains(group)) {
+					instances.add(new Instance(instance.getId().longValue(), instance.getName(),
+							Status.parse(instance.getStatus())));
+				}
 			}
 		}
 
