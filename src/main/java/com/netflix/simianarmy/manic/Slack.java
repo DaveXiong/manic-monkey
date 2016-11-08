@@ -66,8 +66,10 @@ public class Slack implements EventListener {
 			break;
 		case INSTANCE:
 			this.sendToSlack(this.instanceEvent2Message(evt));
+			break;
 		case SYSTEM:
 			this.sendToSlack(this.systemEvent2Message(evt));
+			break;
 		}
 	}
 
