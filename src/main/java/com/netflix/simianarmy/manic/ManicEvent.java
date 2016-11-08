@@ -12,7 +12,7 @@ import com.netflix.simianarmy.client.gcloud.Gce.Status;
 public class ManicEvent {
 
 	public static enum Type{
-		MONKEY,INSTANCE
+		MONKEY,INSTANCE,SYSTEM
 	}
 	
 	public static enum Command{
@@ -90,6 +90,18 @@ public class ManicEvent {
 
 	}
 
+	public static class SystemPayload implements Payload{
+		private String message;
+
+		public String getMessage() {
+			return message;
+		}
+
+		public void setMessage(String message) {
+			this.message = message;
+		}
+		
+	}
 	public static class InstancePayload implements Payload {
 		private Status status;
 		private Status previousStatus;
