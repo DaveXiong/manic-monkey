@@ -11,6 +11,7 @@ import java.util.List;
 import com.netflix.simianarmy.client.gcloud.Definitions;
 import com.netflix.simianarmy.manic.ManicEvent.Command;
 import com.netflix.simianarmy.manic.ManicEvent.InstancePayload;
+import com.netflix.simianarmy.manic.ManicEvent.SystemPayload;
 
 import console.mw.monitor.slack.AttachmentField;
 import console.mw.monitor.slack.MessageAttachment;
@@ -65,6 +66,8 @@ public class Slack implements EventListener {
 			break;
 		case INSTANCE:
 			this.sendToSlack(this.instanceEvent2Message(evt));
+		case SYSTEM:
+			this.sendToSlack(this.systemEvent2Message(evt));
 		}
 	}
 
@@ -149,6 +152,14 @@ public class Slack implements EventListener {
 		} else {
 			message.setText(evt.getCommand() + " " + payload.getName());
 		}
+		return message;
+	}
+	
+	private SlackMessage systemEvent2Message(ManicEvent evt) {
+		SlackMessage message = new SlackMessage();
+
+		SystemPayload payload = (SystemPayload) evt.getPayload();
+		message.setText(payload.getMessage());
 		return message;
 	}
 

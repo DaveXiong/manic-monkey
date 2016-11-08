@@ -4,9 +4,13 @@
 package com.netflix.simianarmy.manic;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,86 +20,148 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.netflix.simianarmy.basic.chaos.BasicInstanceGroup;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
-import com.netflix.simianarmy.client.gcloud.BasicClient;
+import com.netflix.simianarmy.client.gcloud.BasicChaosCrawler.Types;
 import com.netflix.simianarmy.client.gcloud.Gce.Instance;
-import com.netflix.simianarmy.client.gcloud.Gce.Status;
 import com.netflix.simianarmy.manic.ManicEvent.InstancePayload;
+import com.netflix.simianarmy.manic.ManicEvent.SystemPayload;
 
 /**
  * @author dxiong
  *
  */
-public class InstanceMonitor implements Runnable{
-	
+public class InstanceMonitor implements Runnable {
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(InstanceMonitor.class);
 
-	
-	private Map<String,Status> instance2status = Collections.synchronizedMap(new HashMap<String,Status>());
-    private HashMap<String, ScheduledFuture<?>> futures = new HashMap<String, ScheduledFuture<?>>();
+	private Map<String, InstanceGroup> name2Group = Collections.synchronizedMap(new HashMap<String, InstanceGroup>());
+	private Map<String, Instance> name2Instance = Collections.synchronizedMap(new HashMap<String, Instance>());
+	private HashMap<String, ScheduledFuture<?>> futures = new HashMap<String, ScheduledFuture<?>>();
 
-	 /** The scheduler. */
-    private final ScheduledExecutorService scheduler;
-    private ManicChaosMonkey monkey;
-	public InstanceMonitor(ManicChaosMonkey monkey){
+	/** The scheduler. */
+	private final ScheduledExecutorService scheduler;
+
+	private ManicGceClient client;
+
+	private ManicChaosMonkey monkey;
+
+	public InstanceMonitor(ManicChaosMonkey monkey) {
+		this.monkey = monkey;
+		this.client = (ManicGceClient) monkey.context().cloudClient();
 		scheduler = Executors.newScheduledThreadPool(1);
-		this.monkey =monkey;
+		this.client.setMonitor(this);
 	}
-	
-	private boolean isStatusUpdated(String instance,Status status){
-		if(!instance2status.containsKey(instance)){
-			instance2status.put(instance, status);
-		}
-		
-		if(instance2status.get(instance) == status){
-			return false;
-		}
-		
-		LOGGER.info("{} status changed from {} to {} ",instance,instance2status.get(instance),status);
-		instance2status.put(instance, status);
-		return true;
-	}
-	
-	public void run(){
-	
-		BasicClient client = (BasicClient)(monkey.context().cloudClient());
-		
-		try {
+
+	private Map<String, List<Instance>> group2Instances() throws IOException {
+
+		LOGGER.info("sync group and instances...");
+		Map<String, List<Instance>> group2Instances = new HashMap<String, List<Instance>>();
+
+		Set<String> tags = new HashSet<String>();
+
+		List<Instance> allInstances = client.list();
+
+		for (Instance instance : allInstances) {
 			
-			for(InstanceGroup group:client.listGroups()){
-				if(monkey.isGroupEnabled(group)){
-					for(Instance instance:client.list(group.name())){
-						Status oldStatus = instance2status.get(instance.getName());
-						if(isStatusUpdated(instance.getName(),instance.getStatus())){
-							ManicEvent event = new ManicEvent(ManicEvent.Type.INSTANCE,ManicEvent.Command.STAUTS_UPDATE);
-							InstancePayload payload = new InstancePayload();
-							payload.setGroup(group.name());
-							payload.setName(instance.getName());
-							payload.setStatus(instance.getStatus());
-							payload.setPreviousStatus(oldStatus);
-							event.setPayload(payload);
-							MonkeyEventDispatcher.INSTANCE.dispatch(event);
-						}
+			for (String tag : instance.getTags()) {
+
+				InstanceGroup group = new BasicInstanceGroup(tag, Types.TAG, client.getZone(), null);
+
+				if (monkey.isGroupEnabled(group)) {
+					
+					tags.add(tag);
+					List<Instance> instances = group2Instances.get(tag);
+					if (instances == null) {
+						instances = new ArrayList<Instance>();
+						group2Instances.put(tag, instances);
+					}
+
+					instances.add(instance);
+				}
+			}
+		}
+
+		name2Group.clear();
+
+		for (String tag : tags) {
+			name2Group.put(tag, new BasicInstanceGroup(tag, Types.TAG, client.getZone(), null));
+		}
+
+		LOGGER.info("all enabled groups:" + tags);
+
+		return group2Instances;
+	}
+
+	public void run() {
+
+		try {
+			Map<String, List<Instance>> group2Instances = group2Instances();
+
+			for (String group : group2Instances.keySet()) {
+
+				for (Instance instance : group2Instances.get(group)) {
+
+					Instance existingInstance = name2Instance.get(instance.getName());
+
+					if (existingInstance == null) {
+						existingInstance = instance;
+					}
+					name2Instance.put(instance.getName(), instance);
+
+					boolean statusUpdated = existingInstance.getStatus() != instance.getStatus();
+
+					if (statusUpdated) {
+						ManicEvent event = new ManicEvent(ManicEvent.Type.INSTANCE, ManicEvent.Command.STAUTS_UPDATE);
+						InstancePayload payload = new InstancePayload();
+						payload.setGroup(group);
+						payload.setName(instance.getName());
+						payload.setStatus(instance.getStatus());
+						payload.setPreviousStatus(existingInstance.getStatus());
+						event.setPayload(payload);
+						MonkeyEventDispatcher.INSTANCE.dispatch(event);
 					}
 				}
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+
+			ManicEvent event = new ManicEvent(ManicEvent.Type.SYSTEM, ManicEvent.Command.STAUTS_UPDATE);
+			SystemPayload payload = new SystemPayload();
+			payload.setMessage(ex.getMessage());
+			event.setPayload(payload);
+			MonkeyEventDispatcher.INSTANCE.dispatch(event);
 		}
+
 	}
-	
-	public void start(){
-		futures.put(UUID.randomUUID().toString(), scheduler.scheduleWithFixedDelay(this, 0, 1, TimeUnit.MINUTES));	
+
+	public void start() {
+		futures.put(UUID.randomUUID().toString(), scheduler.scheduleWithFixedDelay(this, 0, 10, TimeUnit.SECONDS));
 	}
-	
-	public void start(Runnable runnable){
+
+	public void start(Runnable runnable) {
 		scheduler.execute(runnable);
 	}
-	
-	public void stop(){
-		for(String uuid:futures.keySet()){
+
+	public void stop() {
+		for (String uuid : futures.keySet()) {
 			futures.get(uuid).cancel(true);
 		}
+	}
+
+	public List<InstanceGroup> groups() {
+		List<InstanceGroup> groups = new ArrayList<InstanceGroup>();
+		groups.addAll(name2Group.values());
+		return groups;
+	}
+
+	public List<Instance> instances(String group) {
+		List<Instance> instances = new ArrayList<Instance>();
+		for (Instance instance : name2Instance.values()) {
+			if (instance.getTags().contains(group)) {
+				instances.add(instance);
+			}
+		}
+		return instances;
 	}
 }

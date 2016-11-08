@@ -33,9 +33,9 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ManicChaosMonkey.class);
 
 	private boolean paused = false;
-	
+
 	private InstanceMonitor monitor;
-	
+
 	private Slack slack;
 
 	public ManicChaosMonkey(Context ctx) {
@@ -47,9 +47,9 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		paused = ctx.configuration().getBoolOrElse(NS + "paused", true);
 
 		monitor = new InstanceMonitor(this);
-		
+
 		slack = new Slack(this);
-		
+
 		LOGGER.info("Manic Monkey is ready, version:" + Definitions.VERSION);
 	}
 
@@ -81,11 +81,11 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	}
 
 	public synchronized void start() {
-		
+
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_START, null,
 				UUID.randomUUID().toString()));
 		super.start();
-		
+
 		monitor.start();
 	}
 
@@ -93,7 +93,7 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_STOP, null,
 				UUID.randomUUID().toString()));
 		super.stop();
-		
+
 		monitor.stop();
 	}
 
@@ -112,6 +112,10 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 
 		return super.terminateInstance(group, inst, chaosType);
 	}
+	
+    protected boolean isMaxTerminationCountExceeded(InstanceGroup group) {
+    	return false;
+    }
 
 	protected boolean isAllowedToShutdownInstance(InstanceGroup group) {
 
@@ -195,8 +199,5 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	public void setMonitor(InstanceMonitor monitor) {
 		this.monitor = monitor;
 	}
-	
-	
 
-	
 }

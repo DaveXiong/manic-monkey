@@ -20,6 +20,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.InstanceGroupList;
 import com.google.api.services.compute.model.InstanceList;
+import com.google.api.services.compute.model.Tags;
 import com.netflix.simianarmy.basic.chaos.BasicInstanceGroup;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
 import com.netflix.simianarmy.client.gcloud.BasicChaosCrawler.Types;
@@ -87,8 +88,17 @@ public class Gce {
 		List<Instance> instances = new ArrayList<Instance>();
 
 		for (com.google.api.services.compute.model.Instance instance : internalList()) {
-			instances.add(
-					new Instance(instance.getId().longValue(), instance.getName(), Status.parse(instance.getStatus())));
+			Instance ins = new Instance(instance.getId().longValue(), instance.getName(),
+					Status.parse(instance.getStatus()));
+
+			Tags tag = instance.getTags();
+			if (tag != null && tag.getItems() != null) {
+				ins.setTags(tag.getItems());
+			} else {
+				ins.setTags(new ArrayList<String>());
+			}
+
+			instances.add(ins);
 		}
 
 		return instances;
@@ -125,7 +135,7 @@ public class Gce {
 				continue;
 
 			for (com.google.api.services.compute.model.InstanceWithNamedPorts instance : response.getItems()) {
-				LOGGER.info(instance.getInstance()+":"+instance.getStatus());
+				LOGGER.info(instance.getInstance() + ":" + instance.getStatus());
 				// TODO
 				// instances.add(new Instance(instance.getId().longValue(),
 				// instance.getName(), instance.getStatus()));
@@ -139,14 +149,20 @@ public class Gce {
 	public Instance get(String id) throws IOException {
 		Compute.Instances.Get getRequest = computeService.instances().get(project, zone, id);
 		com.google.api.services.compute.model.Instance instance = getRequest.execute();
-		return new Instance(instance.getId().longValue(), instance.getName(), Status.parse(instance.getStatus()));
+		Instance ins = new Instance(instance.getId().longValue(), instance.getName(), Status.parse(instance.getStatus()));
+		Tags tag = instance.getTags();
+		if (tag != null && tag.getItems() != null) {
+			ins.setTags(tag.getItems());
+		} else {
+			ins.setTags(new ArrayList<String>());
+		}
+		return ins;
 	}
 
 	public Instance stop(String id) throws IOException {
 		LOGGER.info("stop {} in project:{}, zone:{}", new Object[] { id, project, zone });
-		 Compute.Instances.Stop stopRequest =
-		 computeService.instances().stop(project, zone, id);
-		 stopRequest.execute();
+		Compute.Instances.Stop stopRequest = computeService.instances().stop(project, zone, id);
+		stopRequest.execute();
 
 		return get(id);
 
@@ -206,6 +222,7 @@ public class Gce {
 		private long id;
 		private String name;
 		private Status status;
+		private List<String> tags;
 
 		public Instance(Long id, String name, Status status) {
 			this.id = id;
@@ -235,6 +252,14 @@ public class Gce {
 
 		public void setStatus(Status status) {
 			this.status = status;
+		}
+
+		public List<String> getTags() {
+			return tags;
+		}
+
+		public void setTags(List<String> tags) {
+			this.tags = tags;
 		}
 
 	}

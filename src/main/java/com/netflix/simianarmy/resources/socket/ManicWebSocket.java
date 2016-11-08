@@ -48,12 +48,14 @@ public class ManicWebSocket {
 			@Override
 			public void onEvent(ManicEvent evt) {
 
-				if (session.isOpen()) {
-					try {
-						session.getBasicRemote().sendText(new Gson().toJson(evt));
-					} catch (IOException e) {
-						e.printStackTrace();
-						onClose(session);
+				if (evt.getType() == ManicEvent.Type.MONKEY || evt.getType() == ManicEvent.Type.INSTANCE) {
+					if (session.isOpen()) {
+						try {
+							session.getBasicRemote().sendText(new Gson().toJson(evt));
+						} catch (IOException e) {
+							e.printStackTrace();
+							onClose(session);
+						}
 					}
 				}
 

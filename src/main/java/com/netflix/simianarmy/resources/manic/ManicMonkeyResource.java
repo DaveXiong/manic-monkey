@@ -19,6 +19,7 @@ package com.netflix.simianarmy.resources.manic;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -228,18 +229,26 @@ public class ManicMonkeyResource {
 	@GET
 	@Path("/group/{group}")
 	public Response getInstances(@PathParam("group") String group) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		InstanceGroup groupInstance = new BasicInstanceGroup(group, BasicChaosCrawler.Types.TAG, null, null);
+
+		if (!monkey.isGroupEnabled(groupInstance)) {
+
+			gen.writeStartObject();
+			gen.writeStringField("error", "group(" + group + ") is not enabled");
+			gen.writeEndObject();
+
+			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
+		}
 
 		BasicClient client = (BasicClient) monkey.context().cloudClient();
 
-		client.listGroups();
-
 		List<Instance> instances = client.list(group);
 
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 		gen.writeStartObject();
-		gen.writeBooleanField("enabled",
-				monkey.isGroupEnabled(new BasicInstanceGroup(group, BasicChaosCrawler.Types.TAG, null, null)));
+		gen.writeBooleanField("enabled", monkey.isGroupEnabled(groupInstance));
 		gen.writeArrayFieldStart("results");
 		for (Instance instance : instances) {
 			gen.writeStartObject();
@@ -256,21 +265,45 @@ public class ManicMonkeyResource {
 
 	@GET
 	@Path("/group/{group}/{instance}")
-	public Response getInstance(@PathParam("group") String group, @PathParam("instance") String id) throws IOException {
-
-		BasicClient client = (BasicClient) monkey.context().cloudClient();
-		Instance instance = client.get(id);
+	public Response getInstance(@PathParam("group") String group, @PathParam("instance") String id) throws Exception {
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 
-		gen.writeStartObject();
-		gen.writeStringField("name", instance.getName());
-		gen.writeStringField("status", instance.getStatus().name());
-		gen.writeEndObject();
+		InstanceGroup groupInstance = new BasicInstanceGroup(group, BasicChaosCrawler.Types.TAG, null, null);
 
-		gen.close();
-		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
+		if (!monkey.isGroupEnabled(groupInstance)) {
+
+			gen.writeStartObject();
+			gen.writeStringField("error", "group(" + group + ") is not enabled");
+			gen.writeEndObject();
+
+			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
+		}
+
+		BasicClient client = (BasicClient) monkey.context().cloudClient();
+		try {
+			Instance instance = client.get(id);
+
+			gen.writeStartObject();
+			gen.writeStringField("name", instance.getName());
+			gen.writeStringField("status", instance.getStatus().name());
+			gen.writeEndObject();
+
+			gen.close();
+
+			return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
+
+		} catch (IOException ex) {
+			ex.printStackTrace();
+			gen.writeStartObject();
+			gen.writeStringField("error", ex.getMessage());
+			gen.writeEndObject();
+
+			gen.close();
+			return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(baos.toString("UTF-8")).build();
+
+		}
 	}
 
 	public static enum MonkeyAction {
@@ -288,6 +321,9 @@ public class ManicMonkeyResource {
 		case resume:
 			this.monkey.resume();
 			break;
+		default:
+			return Response.status(Response.Status.BAD_REQUEST).build();
+
 		}
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -315,6 +351,20 @@ public class ManicMonkeyResource {
 	public Response controlInstances(@PathParam("group") String group, @PathParam("action") InstanceAction action)
 			throws IOException {
 
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		InstanceGroup groupInstance = new BasicInstanceGroup(group, BasicChaosCrawler.Types.TAG, null, null);
+
+		if (!monkey.isGroupEnabled(groupInstance)) {
+
+			gen.writeStartObject();
+			gen.writeStringField("error", "group(" + group + ") is not enabled");
+			gen.writeEndObject();
+
+			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
+		}
+		
 		String chaosTypeName = null;
 		switch (action) {
 		case start:
@@ -327,8 +377,6 @@ public class ManicMonkeyResource {
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 		gen.writeStartObject();
 		gen.writeArrayFieldStart("results");
 		ChaosType chaosType = ChaosType.parse(monkey.getChaosTypes(), chaosTypeName);
@@ -337,15 +385,29 @@ public class ManicMonkeyResource {
 		gen.writeEndObject();
 		gen.close();
 		LOGGER.info("entity content is '{}'", baos.toString("UTF-8"));
-		
+
 		return getInstances(group);
 	}
 
 	@POST
 	@Path("/group/{group}/{instance}/{action}")
 	public Response controlInstance(@PathParam("group") String group, @PathParam("instance") String instance,
-			@PathParam("action") InstanceAction action) throws IOException {
+			@PathParam("action") InstanceAction action) throws Exception {
 
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		InstanceGroup groupInstance = new BasicInstanceGroup(group, BasicChaosCrawler.Types.TAG, null, null);
+
+		if (!monkey.isGroupEnabled(groupInstance)) {
+
+			gen.writeStartObject();
+			gen.writeStringField("error", "group(" + group + ") is not enabled");
+			gen.writeEndObject();
+
+			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
+		}
+		
 		String chaosTypeName = null;
 		switch (action) {
 		case start:
@@ -357,19 +419,16 @@ public class ManicMonkeyResource {
 		default:
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
-
-		//Response.Status responseStatus = Response.Status.OK;
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
-
+		
 		ChaosType chaosType = ChaosType.parse(monkey.getChaosTypes(), chaosTypeName);
 
 		addTerminationEvent(BasicChaosCrawler.Types.TAG.name(), group, chaosType, instance, gen);
 
 		gen.close();
 		LOGGER.info("entity content is '{}'", baos.toString("UTF-8"));
-		//return Response.status(responseStatus).entity(baos.toString("UTF-8")).build();
-		return getInstance(group,instance);
+		// return
+		// Response.status(responseStatus).entity(baos.toString("UTF-8")).build();
+		return getInstance(group, instance);
 	}
 
 	private Response.Status addTerminationEvent(String groupType, String groupName, ChaosType chaosType,
@@ -412,10 +471,13 @@ public class ManicMonkeyResource {
 	private Response.Status addTerminationEvent(String groupType, String groupName, ChaosType chaosType,
 			JsonGenerator gen) throws IOException {
 		LOGGER.info("Running on-demand termination for instance group type '{}' and name '{}'", groupType, groupName);
-		for (InstanceGroup group : monkey.context().chaosCrawler().groups()) {
-			if (monkey.isGroupEnabled(group) && group.type().toString().equalsIgnoreCase(groupType)
-					&& group.name().equalsIgnoreCase(groupName)) {
-				for (String instance : group.instances()) {
+		for (InstanceGroup group : monkey.context().chaosCrawler().groups(groupName)) {
+			if (monkey.isGroupEnabled(group)) {
+				List<String> instances = new ArrayList<String>();
+				instances.addAll(group.instances());
+				for (String instance : instances) {
+					System.out.println("terminate:"+instance+","+group);
+
 					addTerminationEvent(groupType, groupName, chaosType, instance, gen);
 				}
 			}
