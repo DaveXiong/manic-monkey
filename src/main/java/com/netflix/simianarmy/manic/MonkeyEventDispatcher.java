@@ -16,27 +16,32 @@ import java.util.concurrent.ScheduledExecutorService;
 public class MonkeyEventDispatcher {
 
 	public static final MonkeyEventDispatcher INSTANCE = new MonkeyEventDispatcher();
-	
-	 private final ScheduledExecutorService scheduler;
-	
-	private MonkeyEventDispatcher(){
+
+	private final ScheduledExecutorService scheduler;
+
+	private MonkeyEventDispatcher() {
 		scheduler = Executors.newScheduledThreadPool(1);
 
 	}
+
 	private List<EventListener> listeners = Collections.synchronizedList(new ArrayList<EventListener>());
 
 	public void dispatch(final ManicEvent event) {
-		
-		scheduler.execute(new Runnable(){
+
+		scheduler.execute(new Runnable() {
 			@Override
 			public void run() {
-				for(EventListener listener:listeners){
-					listener.onEvent(event);
-				}				
+				for (EventListener listener : listeners) {
+					try {
+						listener.onEvent(event);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+				}
 			}
-			
+
 		});
-		
+
 	}
 
 	public void subscribe(EventListener listener) {
