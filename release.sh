@@ -21,6 +21,7 @@ export RELEASE_TAG=$TAG
 export RELEASE_TAG_PREFIX='MONKEY-'
 export RELEASE_PROJECT=$PROJECT
 export RELEASE_CHANNEL='#manic-monkey'
+export SEARCHBY='labels'
 
 java -jar toolkit/release-java-LATEST.jar
 

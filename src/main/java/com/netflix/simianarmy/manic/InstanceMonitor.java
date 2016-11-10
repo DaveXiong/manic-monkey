@@ -112,7 +112,7 @@ public class InstanceMonitor implements Runnable {
 					boolean statusUpdated = existingInstance.getStatus() != instance.getStatus();
 
 					if (statusUpdated) {
-						ManicEvent event = new ManicEvent(ManicEvent.Type.INSTANCE, ManicEvent.Command.STAUTS_UPDATE);
+						ManicEvent event = new ManicEvent(ManicEvent.Type.INSTANCE, ManicEvent.Command.STATUS_UPDATE);
 						InstancePayload payload = new InstancePayload();
 						payload.setGroup(group);
 						payload.setName(instance.getName());
@@ -126,7 +126,7 @@ public class InstanceMonitor implements Runnable {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 
-			ManicEvent event = new ManicEvent(ManicEvent.Type.SYSTEM, ManicEvent.Command.STAUTS_UPDATE);
+			ManicEvent event = new ManicEvent(ManicEvent.Type.SYSTEM, ManicEvent.Command.STATUS_UPDATE);
 			SystemPayload payload = new SystemPayload();
 			payload.setMessage(ex.getMessage());
 			event.setPayload(payload);
