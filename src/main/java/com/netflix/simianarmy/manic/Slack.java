@@ -148,7 +148,7 @@ public class Slack implements EventListener {
 
 		InstancePayload payload = (InstancePayload) evt.getPayload();
 
-		if (evt.getCommand() == Command.STAUTS_UPDATE) {
+		if (evt.getCommand() == Command.STATUS_UPDATE) {
 			message.setText(payload.getName() + " changed status from " + payload.getPreviousStatus() + " to "
 					+ payload.getStatus());
 		} else {
