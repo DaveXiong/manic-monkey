@@ -1,0 +1,380 @@
+FORMAT: 1A
+HOST: http://localhost:8080/manic/api/v1/manic
+
+# ManicMonkey
+
+Rest APIs for manic monkey
+
+Basic Auth is required for all APIs(except /), pls get token from system team before accessing them.
+
+Basic Auth example:
+
+        GET /manic/api/v1/manic/group HTTP/1.1
+        Host: localhost:8080
+        Content-Type: application/json
+        Authorization: Basic YWRtaW46YWRtaW4=
+
+
+## Monkey profile [/]
+
+### Get monkey profile [GET]
+
+monkey.enabled = true means the monkey is running random in the backgroud, otherwise it's not running
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "version": "0.0.1",
+          "enabled": false,
+          "now": 1478049022273,
+          "uptime": 15489,
+          "actions": [
+            {
+              "name": "BlockAllNetworkTraffic",
+              "enabled": false
+            },
+            {
+              "name": "DetachVolumes",
+              "enabled": false
+            },
+            {
+              "name": "BurnCpu",
+              "enabled": false
+            },
+            {
+              "name": "BurnIO",
+              "enabled": false
+            },
+            {
+              "name": "KillProcesses",
+              "enabled": false
+            },
+            {
+              "name": "NullRoute",
+              "enabled": false
+            },
+            {
+              "name": "FailEc2",
+              "enabled": false
+            },
+            {
+              "name": "FailDns",
+              "enabled": false
+            },
+            {
+              "name": "FailDynamoDb",
+              "enabled": false
+            },
+            {
+              "name": "FailS3",
+              "enabled": false
+            },
+            {
+              "name": "FillDisk",
+              "enabled": false
+            },
+            {
+              "name": "NetworkCorruption",
+              "enabled": false
+            },
+            {
+              "name": "NetworkLatency",
+              "enabled": false
+            },
+            {
+              "name": "NetworkLoss",
+              "enabled": false
+            },
+            {
+              "name": "ShutdownInstance",
+              "enabled": true
+            },
+            {
+              "name": "StartInstance",
+              "enabled": true
+            }
+          ]
+        }
+
+## Monkey management [/{action}(pause|resume)]
+- Parameters
+  - action (string `pause`) ... pause the monkey
+
+### Pause/Resume the monkey [POST]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "version": "0.0.1",
+          "enabled": false,
+          "now": 1478049058581,
+          "uptime": 51797
+        }
+
+## Instance group [/group]
+
+### get all groups [GET]
+
+group.enabled = true means the group can be accessed by the monkey
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "results": [
+         
+            {
+              "name": "activemq",
+              "enabled": true,
+              "instances": [
+                {
+                  "name": "ci-messaging-activemq-1",
+                  "status": "RUNNING"
+                },
+                {
+                  "name": "ci-messaging-activemq-2",
+                  "status": "TERMINATED"
+                },
+                {
+                  "name": "ci-messaging-activemq-3",
+                  "status": "RUNNING"
+                }
+              ]
+            },
+          
+            {
+              "name": "management-zookeeper",
+              "enabled": false,
+              "instances": [
+                {
+                  "name": "ci-zookeeper-1",
+                  "status": "RUNNING"
+                },
+                {
+                  "name": "ci-zookeeper-2",
+                  "status": "RUNNING"
+                },
+                {
+                  "name": "ci-zookeeper-3",
+                  "status": "TERMINATED"
+                }
+              ]
+            }
+          ]
+        }
+    
+## Group detail [/group/{group}]
+- Parameters
+  - group (string `activemq`) ... group name
+
+### get a group detail [GET]
+
+instance.status can be one of
+- PROVISIONING
+- STAGING
+- RUNNING
+- STOPPING
+- SUSPENDING
+- SUSPENDED
+- TERMINATED
+- UNKNOWN
+
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {  
+           "name":"activemq",
+           "enabled":true,
+           "instances":[  
+              {  
+                 "name":"ci-messaging-activemq-1",
+                 "status":"RUNNING"
+              },
+              {  
+                 "name":"ci-messaging-activemq-2",
+                 "status":"TERMINATED"
+              },
+              {  
+                 "name":"ci-messaging-activemq-3",
+                 "status":"RUNNING"
+              }
+           ]
+        }
+
+## Group management [/group/{group}/{action}(start|stop)]
+- Parameters
+  - group (string `activemq`) ... group name
+  - action (string `start`) ... action for the group
+
+### start/stop all instances in the group [POST]
+
+- start
+    - STAGING --> PROVISIONING --> RUNNING
+- stop
+    - STOPPING --> TERMINATED
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "enabled": true,
+          "results": [
+            {
+              "name": "ci-messaging-activemq-1",
+              "status": "STAGING"
+            },
+            {
+              "name": "ci-messaging-activemq-2",
+              "status": "PROVISIONING"
+            },
+            {
+              "name": "ci-messaging-activemq-3",
+              "status": "RUNNING"
+            }
+          ]
+        }
+
+## Instance management [/group/{group}/{instance}/{action}(start|stop)]
+- Parameters
+  - group (string `activemq`) ... group name
+  - instance (string `ci-messaging-activemq-1`) ... instance name
+  - action (string `start`) ... action for the group
+
+### start/stop a instance [POST]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+        
+        {
+          "name": "ci-messaging-activemq-1",
+          "status": "TERMINATED"
+        }
+
+## Instance detail [/group/{group}/{instance}]
+- Parameters
+  - group (string `activemq`) ... group name
+  - instance (string `ci-messaging-activemq-1`) ... instance name
+
+### get a instance [GET]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "name": "ci-messaging-activemq-1",
+          "status": "TERMINATED"
+        }
+ 
+## History Events [/events]
+
+### get all events [GET]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+            "results": [
+            {
+              "instance": "art-messaging-amq-5",
+              "createdAt": 1479186913968,
+              "group": "art-activemq",
+              "type": "StartInstance"
+            },
+            {
+              "instance": "art-messaging-amq-5",
+              "createdAt": 1479186827522,
+              "group": "art-activemq",
+              "type": "ShutdownInstance"
+            }
+        }
+        
+## Socket notification [/manic]
+
+Web Socket is enabled in server side, if any event on monkey or instance, notificaton will be sent to each client
+
+Sample code:
+```js
+    var webSocket = new WebSocket('ws://localhost:8080/manic/manic');
+    webSocket.onerror = function(event) {
+        //error
+    };
+    webSocket.onopen = function(event) {
+        //connection is ready
+    };
+    
+    webSocket.onmessage = function(event) {
+        //new message received
+    };
+
+```
+
+### Monkey Event [GET /monkey]
+event can be one of
+- START
+- STOP
+- PAUSE
+- RESUME
+
++ Request (application/json)
+
++ Response 200 (application/json)
+        
+        {  
+           "type":"MONKEY",
+           "event":"PAUSE",
+           "createdAt":1478221267252,
+           "payload":{  
+             
+           }
+        }
+
+        
+### Instance status Event [GET /STATUS_UPDATE]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+        
+        {  
+            "type":"INSTANCE",
+            "event":"STAUTS_UPDATE",
+            "createdAt":1478219800035,
+            "payload":{  
+                "status":"STOPPING",
+                "previousStatus":"RUNNING",
+                "name":"ci-messaging-activemq-2",
+                "group":"activemq"
+            }
+        }
+
+### Instance management Event [GET /START]
+event can be one of
+- START
+- STOP
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {  
+           "type":"INSTANCE",
+           "event":"START",
+           "createdAt":1478219800035,
+           "payload":{
+              "name":"ci-messaging-activemq-2",
+              "group":"activemq"
+           }
+        }
+                  
+  
