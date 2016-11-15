@@ -36,10 +36,11 @@ public class ManicInstanceSelector {
 
 		List<String> results = new ArrayList<String>();
 
-		String genericKey = "simianarmy.chaos." + chaosType.getKey() + ".minInstances";
-		String specificKey = "simianarmy.chaos.TAG." + group.name() + "." + chaosType.getKey() + ".minInstances";
-		int minActiveInstance = (int) manicMonkey.context().configuration().getNumOrElse(specificKey.toLowerCase(),
-				manicMonkey.context().configuration().getNumOrElse(genericKey.toLowerCase(), 0));
+		String genericKey = "simianarmy.chaos." + chaosType.getKey().toLowerCase() + ".mininstances";
+		String specificKey = "simianarmy.chaos.TAG." + group.name() + "." + chaosType.getKey().toLowerCase()
+				+ ".mininstances";
+		int minActiveInstance = (int) manicMonkey.context().configuration().getNumOrElse(specificKey,
+				manicMonkey.context().configuration().getNumOrElse(genericKey, 0));
 
 		List<String> activeInstances = new ArrayList<String>();
 		SshConfig sshConfig = new SshConfig(manicMonkey.context().configuration());
