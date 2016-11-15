@@ -50,7 +50,6 @@ public class StartInstanceChaosType extends ChaosType {
 				BasicClient gceClient = (BasicClient) cloudClient;
 				switch (gceClient.get(instanceId).getStatus()) {
 				case TERMINATED:
-				case SUSPENDED:
 					return true;
 				default:
 					return false;
