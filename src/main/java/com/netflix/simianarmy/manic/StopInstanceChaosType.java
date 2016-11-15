@@ -33,7 +33,6 @@ public class StopInstanceChaosType extends ShutdownInstanceChaosType {
 				BasicClient gceClient = (BasicClient) cloudClient;
 				switch (gceClient.get(instanceId).getStatus()) {
 				case RUNNING:
-				case SUSPENDED:
 					return true;
 				default:
 					return false;

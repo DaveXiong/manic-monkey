@@ -3,25 +3,26 @@
  */
 package com.netflix.simianarmy.manic;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 import org.apache.commons.lang.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Lists;
+import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.EventType;
 import com.netflix.simianarmy.FeatureNotEnabledException;
 import com.netflix.simianarmy.InstanceGroupNotFoundException;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.chaos.BasicChaosMonkey;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
+import com.netflix.simianarmy.chaos.ChaosInstance;
 import com.netflix.simianarmy.chaos.ChaosType;
-import com.netflix.simianarmy.chaos.ShutdownInstanceChaosType;
-import com.netflix.simianarmy.client.gcloud.BasicClient;
-import com.netflix.simianarmy.client.gcloud.Gce;
+import com.netflix.simianarmy.chaos.SshConfig;
 
 /**
  * @author dxiong
@@ -38,6 +39,8 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 
 	private Slack slack;
 
+	private ManicInstanceSelector instanceSelector;
+
 	public ManicChaosMonkey(Context ctx) {
 		super(ctx);
 
@@ -49,6 +52,8 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		monitor = new InstanceMonitor(this);
 
 		slack = new Slack(this);
+
+		instanceSelector = new ManicInstanceSelector(this);
 
 		LOGGER.info("Manic Monkey is ready, version:" + Definitions.VERSION);
 	}
@@ -97,59 +102,62 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		monitor.stop();
 	}
 
-	public boolean isGroupEnabled(InstanceGroup group) {
-		return super.isGroupEnabled(group);
-	}
+	protected ChaosType pickChaosType(CloudClient cloudClient, InstanceGroup group) {
+		Random random = new Random();
 
-	protected Event terminateInstance(InstanceGroup group, String inst, ChaosType chaosType) {
+		SshConfig sshConfig = new SshConfig(cfg);
 
-		if (chaosType instanceof ShutdownInstanceChaosType) {
-			if (!isAllowedToShutdownInstance(group)) {
-				reportEventForSummary(EventTypes.CHAOS_TERMINATION_SKIPPED, group, inst);
-				return null;
-			}
-		}
-
-		return super.terminateInstance(group, inst, chaosType);
-	}
-	
-    protected boolean isMaxTerminationCountExceeded(InstanceGroup group) {
-    	return false;
-    }
-
-	protected boolean isAllowedToShutdownInstance(InstanceGroup group) {
-
-		List<String> instances = group.instances();
-		if (instances.isEmpty()) {
-			LOGGER.info("{} has no any instances", group.name());
-			return false;
-		}
-
-		if (this.context().cloudClient() instanceof BasicClient) {
-			List<String> activeInstances = new ArrayList<String>();
-			BasicClient gceClient = (BasicClient) this.context().cloudClient();
-			for (String instanceName : instances) {
-				try {
-					if (gceClient.get(instanceName).getStatus() == Gce.Status.RUNNING) {
-						activeInstances.add(instanceName);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+		List<ChaosType> applicable = Lists.newArrayList();
+		for (ChaosType chaosType : allChaosTypes) {
+			for (String instanceId : group.instances()) {
+				ChaosInstance instance = new ChaosInstance(cloudClient, instanceId, sshConfig);
+				if (chaosType.isEnabled() && chaosType.canApply(instance)) {
+					applicable.add(chaosType);
+					break;
 				}
 			}
-
-			String propName = "minActiveInstances";
-			int minActiveInstances = (int) getNumFromCfgOrDefault(group, propName, 1.0);
-
-			LOGGER.info("{} active instances in group {},required minActiveInstances:{}", activeInstances.size(),
-					group.name(), minActiveInstances);
-
-			return activeInstances.size() > minActiveInstances;
 		}
 
-		return true;
+		if (applicable.isEmpty()) {
+			return null;
+		}
 
+		int index = random.nextInt(applicable.size());
+		return applicable.get(index);
+	}
+
+	public void doMonkeyBusiness() {
+		context().resetEventReport();
+		cfg.reload();
+		if (!isChaosMonkeyEnabled()) {
+			return;
+		}
+		for (InstanceGroup group : context().chaosCrawler().groups()) {
+			if (isGroupEnabled(group)) {
+
+				ChaosType chaosType = pickChaosType(context().cloudClient(), group);
+
+				if (chaosType == null) {
+					// This is surprising ... normally we can always just
+					// terminate it
+					LOGGER.warn("No chaos type was applicable to the group: {}", group.name());
+					continue;
+				}
+
+				Collection<String> instances = instanceSelector.select(group, chaosType);
+				for (String inst : instances) {
+					terminateInstance(group, inst, chaosType);
+				}
+			}
+		}
+	}
+
+	public boolean isGroupEnabled(InstanceGroup group) {
+		return getBoolFromCfgOrDefault(group, "enabled", false);
+	}
+
+	protected boolean isMaxTerminationCountExceeded(InstanceGroup group) {
+		return false;
 	}
 
 	public Event terminateNow(String type, String name, ChaosType chaosType, String instance)
