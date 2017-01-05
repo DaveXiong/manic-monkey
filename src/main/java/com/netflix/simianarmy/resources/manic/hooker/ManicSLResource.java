@@ -19,21 +19,18 @@ package com.netflix.simianarmy.resources.manic.hooker;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
@@ -41,14 +38,12 @@ import org.codehaus.jackson.map.MappingJsonFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.netflix.simianarmy.Monkey;
 import com.netflix.simianarmy.MonkeyRunner;
 import com.netflix.simianarmy.manic.ManicChaosMonkey;
+import com.netflix.simianarmy.resources.manic.hooker.HookerSearch.INDEX;
+import com.netflix.simianarmy.resources.manic.hooker.ServiceLayerMock.Feature;
 import com.sun.jersey.spi.resource.Singleton;
-
-import console.mw.sl.service.schema.AllocatePortPayload;
 
 /**
  * The Class ManicMonkeyResource for json REST apis.
@@ -93,7 +88,11 @@ public class ManicSLResource {
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 
 		gen.writeStartObject();
-		gen.writeBooleanField("ping", true);
+		gen.writeArrayFieldStart("types");
+		for (HookerType type : HookerType.values()) {
+			gen.writeString(type.toString());
+		}
+		gen.writeEndArray();
 
 		gen.writeEndObject();
 
@@ -114,24 +113,16 @@ public class ManicSLResource {
 	 *             Signals that an I/O exception has occurred.
 	 */
 	@GET
-	@Path("/events")
-	public Response getEvents(@Context UriInfo uriInfo) throws IOException {
-		Map<String, String> query = new HashMap<String, String>();
-		for (Map.Entry<String, List<String>> pair : uriInfo.getQueryParameters().entrySet()) {
-			if (pair.getValue().isEmpty()) {
-				continue;
-			}
-			query.put(pair.getKey(), pair.getValue().get(0));
-
-		}
-
-		List<PortHooker> hookers = SL.getRecorder().getPortHookers(query);
+	@Path("/{hookerType}")
+	public Response getEvents(@PathParam("hookerType") String type) throws IOException {
+		HookerType hookerType = HookerType.parse(type);
+		List<Hooker<?, ?>> hookers = SL.getRecorder().getHookers(hookerType);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
 		gen.writeStartObject();
 		gen.writeArrayFieldStart("results");
-		for (PortHooker hooker : hookers) {
+		for (Hooker<?, ?> hooker : hookers) {
 			gen.writeObject(hooker);
 
 		}
@@ -141,35 +132,25 @@ public class ManicSLResource {
 		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
 	}
 
-	@POST
+	@PUT
 	@Path("/{hookerType}")
 	public Response addHooker(@PathParam("hookerType") String type, String data) throws Exception {
 		System.out.println(data);
 
-		switch (type.toUpperCase()) {
-		case "PORT":
-			Type portHookerType = new TypeToken<Hooker<PortCommandArgs, AllocatePortPayload>>() {
-			}.getType();
-			Hooker<PortCommandArgs, AllocatePortPayload> portHooker = new Gson().fromJson(data, portHookerType);
-		case "CONNECTION":
-		case "CR":
-		case "PEER":
-		case "AWS":
-		default:
-			break;
-		}
+		HookerType hookerType = HookerType.parse(type);
 
-		PortHooker hooker = new Gson().fromJson(data, PortHooker.class);
+		Map<INDEX, String> index = SL.getHookerSearch(hookerType).parseIndexes(data);
 
-		SL.getRecorder().addHooker(hooker);
+		SL.getRecorder().addHooker(hookerType, index.get(INDEX.MESSAGEID), index.get(INDEX.UUID),
+				index.get(INDEX.COMMAND), data);
 
 		return Response.status(Response.Status.OK).entity(data).build();
 
 	}
 
 	@DELETE
-	@Path("/port/{id}")
-	public Response deleteHooker(@PathParam("id") String id) throws Exception {
+	@Path("/{hookerId}")
+	public Response deleteHooker(@PathParam("hookerId") String id) throws Exception {
 		System.out.println("Delete :" + id);
 
 		SL.getRecorder().deleteHooker(id);
@@ -178,27 +159,20 @@ public class ManicSLResource {
 
 	}
 
-	@POST
-	@Path("/port/enable")
-	public Response enablePortMock() throws Exception {
-		SL.enablePortMock();
-		return Response.status(Response.Status.OK).build();
-
+	enum Action {
+		enable, disable
 	}
 
 	@POST
-	@Path("/port/disable")
-	public Response disablePortMock() throws Exception {
-		SL.disablePortMock();
+	@Path("/{feature}/{action}")
+	public Response enable(@PathParam("feature") Feature feature, @PathParam("feature") Action action)
+			throws Exception {
+		if (action == Action.enable) {
+			SL.enable(feature);
+		} else {
+			SL.disable(feature);
+		}
 		return Response.status(Response.Status.OK).build();
-
-	}
-
-	@POST
-	@Path("/port/{uuid}")
-	public Response addCommand(@PathParam("uuid") String uuid, String data) throws Exception {
-		System.out.println(uuid + ":" + data);
-		return Response.status(Response.Status.OK).entity(data).build();
 
 	}
 

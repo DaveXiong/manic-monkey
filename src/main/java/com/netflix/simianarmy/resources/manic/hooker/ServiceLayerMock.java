@@ -4,7 +4,11 @@
 package com.netflix.simianarmy.resources.manic.hooker;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.jms.Message;
 import javax.jms.TextMessage;
@@ -37,43 +41,49 @@ public class ServiceLayerMock {
 	static {
 		BasicConfigurator.configure();
 	}
-	
+
+	public static enum Feature {
+		L2, L3, POP, DCP
+	}
+
 	/** The Constant LOGGER. */
 	private static final Logger LOGGER = LoggerFactory.getLogger(ServiceLayerMock.class);
 
 	private SLResourceRecorder recorder;
 	private ActiveMQ activeMQ;
-	
+
 	private Slack slack;
 
-	private PortMockHandler portRequestHandler;
+	private RequestHandler requestHandler;
 
-	public static String PORT_REQ_QUEUE = "localhost_dxiong/" + ServiceLayerSetting.NETWORK_REQ_DEFAULT;
-	public static String PORT_RES_QUEUE = "localhost_dxiong/" + ServiceLayerSetting.NETWORK_RES_DEFAULT;
+	public static String L2_REQ_QUEUE = "localhost_dxiong/" + ServiceLayerSetting.NETWORK_REQ_DEFAULT;
+	public static String L2_RES_QUEUE = "localhost_dxiong/" + ServiceLayerSetting.NETWORK_RES_DEFAULT;
 
-	final ActiveMQMessageListener portRequestListener = new ActiveMQMessageListener() {
+	private Map<HookerType, HookerSearch> type2Search = new HashMap<HookerType, HookerSearch>();
+	private Set<Feature> enabledFeatures = new HashSet<Feature>();
 
-		final RequestContext portRequestContext = new RequestContext() {
+	final ActiveMQMessageListener l2RequestListener = new ActiveMQMessageListener() {
+
+		final RequestContext l2RequestContext = new RequestContext() {
 
 			@Override
-			public void disableConsume() {
-				disablePortMock();
+			public void disable() {
+				ServiceLayerMock.this.disable(Feature.L2);
 			}
 
 			@Override
-			public void enableConsume() {
-				enablePortMock();
+			public void enable() {
+				ServiceLayerMock.this.enable(Feature.L2);
 			}
 
 			@Override
 			public void send(String message) {
-				sendMessage(PORT_REQ_QUEUE, message);
-
+				ServiceLayerMock.this.send(L2_REQ_QUEUE, message);
 			}
 
 			@Override
 			public void broadcast(String message) {
-				broadcastMessage(PORT_RES_QUEUE, message);
+				ServiceLayerMock.this.broadcast(L2_RES_QUEUE, message);
 			}
 
 		};
@@ -85,9 +95,9 @@ public class ServiceLayerMock {
 				System.out.println("[RECEIVED]" + msg);
 
 				Request request = new Gson().fromJson(msg, Request.class);
-				Response response = portRequestHandler.onRequest(portRequestContext, request, msg);
+				Response response = requestHandler.onRequest(l2RequestContext, request, msg);
 				if (response != null) {
-					portRequestContext.broadcast(new Gson().toJson(response));
+					l2RequestContext.broadcast(new Gson().toJson(response));
 				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
@@ -134,22 +144,52 @@ public class ServiceLayerMock {
 		recorder = new SLResourceRecorder(
 				new BasicConfiguration(loadConfigurationFileIntoProperties("simianarmy.properties")));
 
-		portRequestHandler = new PortMockHandler(recorder);
+		type2Search.put(HookerType.PORT, new PortHookerSearch());
+
+		requestHandler = new DefaultRequestHandler(recorder, type2Search);
 	}
 
-	public void enablePortMock() {
-		activeMQ.subscribe(PORT_REQ_QUEUE, portRequestListener);
+	public HookerSearch getHookerSearch(HookerType type) {
+		return type2Search.get(type);
 	}
 
-	public void disablePortMock() {
-		portRequestListener.close();
+	public void enable(Feature feature) {
+		if(enabledFeatures.contains(feature)){
+			return;
+		}
+		switch (feature) {
+		case L2:
+			activeMQ.subscribe(L2_REQ_QUEUE, l2RequestListener);
+			break;
+		case L3:
+		case POP:
+		case DCP:
+		}
+		
+		enabledFeatures.add(feature);
 	}
 
-	public void sendMessage(String target, String data) {
+	public void disable(Feature feature) {
+		if(!enabledFeatures.contains(feature)){
+			return;
+		}
+		switch(feature){
+		case L2:
+			l2RequestListener.close();
+			break;
+		case L3:
+		case POP:
+		case DCP:
+		}
+		
+		enabledFeatures.remove(feature);
+	}
+
+	public void send(String target, String data) {
 		this.activeMQ.sendMessage(target, data);
 	}
 
-	public void broadcastMessage(String target, String data) {
+	public void broadcast(String target, String data) {
 		this.activeMQ.sendMessage(target, data, true, 0);
 	}
 

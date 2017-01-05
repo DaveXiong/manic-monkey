@@ -8,9 +8,9 @@ package com.netflix.simianarmy.resources.manic.hooker;
  *
  */
 public interface RequestContext {
-	void disableConsume();
+	void disable();
 
-	void enableConsume();
+	void enable();
 
 	void send(String message);
 

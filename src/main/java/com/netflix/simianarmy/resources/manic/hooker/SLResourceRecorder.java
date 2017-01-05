@@ -28,6 +28,7 @@ import com.netflix.simianarmy.basic.BasicConfiguration;
 import com.netflix.simianarmy.basic.BasicRecorderEvent;
 import com.netflix.simianarmy.client.gcloud.Definitions;
 
+import console.mw.sl.service.schema.AllocatePortCommandArgs;
 import console.mw.sl.service.schema.AllocatePortPayload;
 import console.mw.sl.service.schema.Command;
 
@@ -103,7 +104,7 @@ public class SLResourceRecorder extends RDSRecorder {
 		String uuid = null;
 		String command = hooker.getRequest().getCommand().toString();
 		String messageId = hooker.getRequest().getId();
-		PortCommandArgs commandArgs = hooker.getRequest().getCommandArgs();
+		AllocatePortCommandArgs commandArgs = hooker.getRequest().getCommandArgs();
 		if (commandArgs != null) {
 			uuid = commandArgs.getPortUuid();
 		}
@@ -135,14 +136,13 @@ public class SLResourceRecorder extends RDSRecorder {
 		return hooker;
 	}
 
-	public Hooker<?, ?> addHooker(HookerType type, String messageId, String uuid, String command, Hooker<?, ?> hooker) {
+	public void addHooker(HookerType type, String messageId, String uuid, String command, String json) {
 		BasicRecorderEvent event = new BasicRecorderEvent(Enums.SL, type, SLResourceRecorder.getRegion(),
 				UUID.randomUUID().toString());
-		event.addField("json", new Gson().toJson(hooker));
+		event.addField("json", json);
 
 		String evtTime = String.valueOf(event.eventTime().getTime());
 		String name = String.format("%s-%s-%s-%s", event.monkeyType().name(), event.id(), getRegion(), evtTime);
-		String json = new Gson().toJson(hooker);
 
 		LOGGER.debug(String.format("Saving event %s to RDS table %s", name, getTable()));
 		StringBuilder sb = new StringBuilder();
@@ -163,7 +163,6 @@ public class SLResourceRecorder extends RDSRecorder {
 				command, uuid, messageId, json);
 		LOGGER.debug(String.format("%d rows inserted", updated));
 
-		return hooker;
 	}
 
 	public void deleteHooker(String hookerId) {
@@ -187,7 +186,7 @@ public class SLResourceRecorder extends RDSRecorder {
 		case PEER:
 		case AWS:
 		default:
-			type = new TypeToken<Hooker<PortCommandArgs, AllocatePortPayload>>() {
+			type = new TypeToken<Hooker<AllocatePortCommandArgs, AllocatePortPayload>>() {
 			}.getType();
 		}
 		List<Event> events = this.findEvents(Enums.SL, hookerType, new HashMap<String, String>());
