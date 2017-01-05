@@ -14,6 +14,7 @@ import com.google.gson.reflect.TypeToken;
 import console.mw.sl.service.schema.AllocatePortCommandArgs;
 import console.mw.sl.service.schema.AllocatePortPayload;
 import console.mw.sl.service.schema.Request;
+import console.mw.sl.service.schema.TemplateRequest;
 
 /**
  * @author dxiong
@@ -75,13 +76,13 @@ public class PortHookerSearch implements HookerSearch {
 	@Override
 	public Hooker<?, ?> findBestHooker(List<Hooker<?, ?>> hookers, Request request, String rawMessage) {
 
-		Map<INDEX, String> indexes = parseIndexes(rawMessage);
+		Map<INDEX, String> indexes = getRequestIndex(rawMessage);
 
 		return findBestHooker(hookers, indexes.get(INDEX.CUSTOMER), indexes.get(INDEX.UUID));
 	}
 
 	@Override
-	public Map<INDEX, String> parseIndexes(String rawMessage) {
+	public Map<INDEX, String> getHookerIndex(String rawMessage) {
 		Map<INDEX, String> index = new HashMap<INDEX, String>();
 
 		Type type = new TypeToken<Hooker<AllocatePortCommandArgs, AllocatePortPayload>>() {
@@ -100,9 +101,36 @@ public class PortHookerSearch implements HookerSearch {
 		}
 
 		index.put(INDEX.COMMAND, portHooker.getRequest().getCommand().toString());
-		index.put(INDEX.COMMAND, customerId);
+		index.put(INDEX.CUSTOMER, customerId);
 		index.put(INDEX.UUID, uuid);
 		index.put(INDEX.MESSAGEID, portHooker.getRequest().getId());
+
+		return index;
+	}
+
+	@Override
+	public Map<INDEX, String> getRequestIndex(String rawMessage) {
+		Map<INDEX, String> index = new HashMap<INDEX, String>();
+
+		Type type = new TypeToken<TemplateRequest<AllocatePortCommandArgs>>() {
+		}.getType();
+
+		TemplateRequest<AllocatePortCommandArgs> request = new Gson().fromJson(rawMessage, type);
+
+		AllocatePortCommandArgs commandArgs = request.getCommandArgs();
+
+		String customerId = null;
+		String uuid = null;
+
+		if (commandArgs != null) {
+			customerId = commandArgs.getCustomerId();
+			uuid = commandArgs.getPortUuid();
+		}
+
+		index.put(INDEX.COMMAND, request.getCommand().toString());
+		index.put(INDEX.CUSTOMER, customerId);
+		index.put(INDEX.UUID, uuid);
+		index.put(INDEX.MESSAGEID, request.getId());
 
 		return index;
 	}

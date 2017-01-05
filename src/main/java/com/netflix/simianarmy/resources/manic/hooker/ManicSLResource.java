@@ -139,7 +139,7 @@ public class ManicSLResource {
 
 		HookerType hookerType = HookerType.parse(type);
 
-		Map<INDEX, String> index = SL.getHookerSearch(hookerType).parseIndexes(data);
+		Map<INDEX, String> index = SL.getHookerSearch(hookerType).getHookerIndex(data);
 
 		SL.getRecorder().addHooker(hookerType, index.get(INDEX.MESSAGEID), index.get(INDEX.UUID),
 				index.get(INDEX.COMMAND), data);
@@ -159,13 +159,13 @@ public class ManicSLResource {
 
 	}
 
-	enum Action {
+	public static enum Action {
 		enable, disable
 	}
 
 	@POST
 	@Path("/{feature}/{action}")
-	public Response enable(@PathParam("feature") Feature feature, @PathParam("feature") Action action)
+	public Response enable(@PathParam("feature") Feature feature, @PathParam("action") Action action)
 			throws Exception {
 		if (action == Action.enable) {
 			SL.enable(feature);

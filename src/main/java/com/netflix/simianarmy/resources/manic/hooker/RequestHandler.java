@@ -4,7 +4,6 @@
 package com.netflix.simianarmy.resources.manic.hooker;
 
 import console.mw.sl.service.schema.Request;
-import console.mw.sl.service.schema.Response;
 
 /**
  * @author dxiong
@@ -12,7 +11,8 @@ import console.mw.sl.service.schema.Response;
  */
 public interface RequestHandler {
 
-	int DELAY_DEFAULT = 30000;
+	long DELAY_DEFAULT = 30000l;
+	long TIMEOUT = 15*60*1000l;
 
-	Response onRequest(RequestContext context, Request request, String rawData);
+	void onRequest(RequestContext context, Request request, String rawData);
 }

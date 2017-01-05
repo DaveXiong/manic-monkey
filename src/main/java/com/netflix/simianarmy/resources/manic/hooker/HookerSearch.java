@@ -19,5 +19,8 @@ public interface HookerSearch {
 
 	Hooker<?, ?> findBestHooker(List<Hooker<?, ?>> hookers, Request request, String rawMessage);
 
-	Map<INDEX, String> parseIndexes(String rawMessage);
+	Map<INDEX, String> getHookerIndex(String rawMessage);
+	
+	Map<INDEX, String> getRequestIndex(String rawMessage);
+
 }

@@ -3,6 +3,7 @@
  */
 package com.netflix.simianarmy.resources.manic.hooker;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -12,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import com.google.gson.Gson;
 
+import console.mw.sl.service.schema.Command;
 import console.mw.sl.service.schema.Request;
 import console.mw.sl.service.schema.Response;
 
@@ -27,6 +29,8 @@ public class DefaultRequestHandler implements RequestHandler {
 
 	private Map<HookerType, HookerSearch> type2HookerSearch;
 
+	private Map<Command, Hooker<?, ?>> defaultHookers = new HashMap<Command, Hooker<?, ?>>();
+
 	private static final Timer TIMER = new Timer();
 
 	/**
@@ -35,6 +39,8 @@ public class DefaultRequestHandler implements RequestHandler {
 	public DefaultRequestHandler(SLResourceRecorder recorder, Map<HookerType, HookerSearch> type2HookerSearch) {
 		this.recorder = recorder;
 		this.type2HookerSearch = type2HookerSearch;
+
+		defaultHookers.put(Command.PING, new PingHooker());
 	}
 
 	/*
@@ -46,16 +52,19 @@ public class DefaultRequestHandler implements RequestHandler {
 	 * console.mw.sl.service.schema.Request, java.lang.String)
 	 */
 	@Override
-	public Response onRequest(final RequestContext context, final Request request, final String rawData) {
+	public void onRequest(final RequestContext context, final Request request, final String rawData) {
 		String command = request.getCommand().toString();
 
-		HookerType type = null;
+		HookerType hookerType = null;
 		if (command.startsWith("PORT")) {
-			type = HookerType.PORT;
+			hookerType = HookerType.PORT;
+		} else if (command.startsWith("CONNECTION")) {
+			hookerType = HookerType.CONNECTION;
 		}
 
+		final HookerType type = hookerType;
 		final Hooker<?, ?> hooker = findBestHooker(type, request, rawData);
-		;
+
 		if (hooker == null) {
 			context.disable();
 			try {
@@ -63,26 +72,28 @@ public class DefaultRequestHandler implements RequestHandler {
 			} finally {
 				context.enable();
 			}
-			return null;
+			return;
 		}
-
-		Response response = null;
 
 		switch (hooker.getAction()) {
 		case DEFAULT:
-			response = hooker.getResponse();
-			response.setId(request.getId());
+			doIt(context, hooker, request.getId());
 			break;
 
 		case MANUAL:
+			final long start = System.currentTimeMillis();
 			class Task extends TimerTask {
 
 				@Override
 				public void run() {
-					PortHooker portHooker = recorder.getPortHookerByMessageId(request.getId());
+					Hooker<?, ?> portHooker = recorder.getHookerByMessageId(type, request.getId());
 					if (portHooker == null) {
-						doIt(context, new ProcessingHooker(hooker), request.getId());
-						TIMER.schedule(new Task(), DELAY_DEFAULT);
+						if ((System.currentTimeMillis() - start) < TIMEOUT) {
+							doIt(context, new ProcessingHooker(), request.getId());
+							TIMER.schedule(new Task(), DELAY_DEFAULT);
+						} else {
+							doIt(context, new InternalErrorHooker(), request.getId());
+						}
 					} else {
 						doIt(context, portHooker, request.getId());
 					}
@@ -93,7 +104,7 @@ public class DefaultRequestHandler implements RequestHandler {
 			TIMER.schedule(new Task(), DELAY_DEFAULT);
 			break;
 		case DELAY:
-			Integer delay = (Integer) hooker.getParameters().get("delay");
+			Long delay = (Long) hooker.getParameters().get(Hooker.PARAMETER_DELAY);
 			if (delay == null) {
 				delay = DELAY_DEFAULT;
 			}
@@ -105,12 +116,10 @@ public class DefaultRequestHandler implements RequestHandler {
 			}, delay);
 			break;
 		case RANDOM:
-			response = new Response();
-			response.setCode(500);
-			response.setMessage("Internal error");
-			response.setId(request.getId());
+			doIt(context, new InternalErrorHooker(), request.getId());
+			break;
 		}
-		return response;
+
 	}
 
 	protected void doIt(RequestContext context, Hooker<?, ?> hook, String id) {
@@ -118,15 +127,32 @@ public class DefaultRequestHandler implements RequestHandler {
 		String message = hook.getResponse().getMessage() == null ? "" : hook.getResponse().getMessage();
 		hook.getResponse().setMessage("[MONKEY]" + message);
 		context.broadcast(new Gson().toJson(hook.getResponse()));
+
+		LOGGER.info("response>>" + new Gson().toJson(hook.getResponse()));
+	}
+
+	protected void doIt(RequestContext context, Response response, String id) {
+		response.setId(id);
+		response.setMessage("[Monkey]" + response.getMessage());
+		context.broadcast(new Gson().toJson(response));
+		LOGGER.info("response>>" + new Gson().toJson(response));
 	}
 
 	protected Hooker<?, ?> findBestHooker(HookerType type, Request request, String rawMessage) {
 		HookerSearch search = type2HookerSearch.get(type);
 
+		Hooker<?, ?> hooker = null;
 		if (search != null) {
-			return search.findBestHooker(recorder.getHookers(type), request, rawMessage);
+			hooker = search.findBestHooker(recorder.getHookers(type, request.getCommand()), request, rawMessage);
 		}
-		return null;
+
+		LOGGER.info("Best Hooker for " + request.getCommand() + "," + hooker);
+
+		if (hooker == null) {
+			hooker = defaultHookers.get(request.getCommand());
+		}
+
+		return hooker;
 	}
 
 }

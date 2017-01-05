@@ -13,7 +13,6 @@ import java.util.Set;
 import javax.jms.Message;
 import javax.jms.TextMessage;
 
-import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,17 +29,12 @@ import console.mw.sl.ServiceLayerSetting;
 import console.mw.sl.activemq.ActiveMQImpl;
 import console.mw.sl.activemq.ActiveMQMessageListener;
 import console.mw.sl.service.schema.Request;
-import console.mw.sl.service.schema.Response;
 
 /**
  * @author dxiong
  *
  */
 public class ServiceLayerMock {
-
-	static {
-		BasicConfigurator.configure();
-	}
 
 	public static enum Feature {
 		L2, L3, POP, DCP
@@ -92,13 +86,11 @@ public class ServiceLayerMock {
 		public void onMessage(Message message) {
 			try {
 				String msg = ((TextMessage) message).getText();
-				System.out.println("[RECEIVED]" + msg);
+				LOGGER.info("[RECEIVED]" + msg);
 
 				Request request = new Gson().fromJson(msg, Request.class);
-				Response response = requestHandler.onRequest(l2RequestContext, request, msg);
-				if (response != null) {
-					l2RequestContext.broadcast(new Gson().toJson(response));
-				}
+				requestHandler.onRequest(l2RequestContext, request, msg);
+				
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}

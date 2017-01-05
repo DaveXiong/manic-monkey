@@ -7,7 +7,6 @@ import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,45 +96,6 @@ public class SLResourceRecorder extends RDSRecorder {
 		return "SL";
 	}
 
-	public PortHooker addHooker(PortHooker hooker) {
-		BasicRecorderEvent event = new BasicRecorderEvent(Enums.SL, HookerType.PORT, SLResourceRecorder.getRegion(),
-				UUID.randomUUID().toString());
-
-		String uuid = null;
-		String command = hooker.getRequest().getCommand().toString();
-		String messageId = hooker.getRequest().getId();
-		AllocatePortCommandArgs commandArgs = hooker.getRequest().getCommandArgs();
-		if (commandArgs != null) {
-			uuid = commandArgs.getPortUuid();
-		}
-		event.addField("json", new Gson().toJson(hooker));
-
-		String evtTime = String.valueOf(event.eventTime().getTime());
-		String name = String.format("%s-%s-%s-%s", event.monkeyType().name(), event.id(), getRegion(), evtTime);
-		String json = new Gson().toJson(hooker);
-
-		LOGGER.debug(String.format("Saving event %s to RDS table %s", name, getTable()));
-		StringBuilder sb = new StringBuilder();
-		sb.append("insert into ").append(getTable());
-		sb.append(" (");
-		sb.append(FIELD_ID).append(",");
-		sb.append(FIELD_EVENT_TIME).append(",");
-		sb.append(FIELD_MONKEY_TYPE).append(",");
-		sb.append(FIELD_EVENT_TYPE).append(",");
-		sb.append(FIELD_COMMAND).append(",");
-		sb.append(FIELD_UUID).append(",");
-		sb.append(FIELD_MSGID).append(",");
-		sb.append(FIELD_DATA_JSON).append(") values (?,?,?,?,?,?,?,?)");
-
-		LOGGER.debug(String.format("Insert statement is '%s'", sb));
-		int updated = this.getJdbcTemplate().update(sb.toString(), event.id(), event.eventTime().getTime(),
-				SimpleDBRecorder.enumToValue(event.monkeyType()), SimpleDBRecorder.enumToValue(event.eventType()),
-				command, uuid, messageId, json);
-		LOGGER.debug(String.format("%d rows inserted", updated));
-
-		return hooker;
-	}
-
 	public void addHooker(HookerType type, String messageId, String uuid, String command, String json) {
 		BasicRecorderEvent event = new BasicRecorderEvent(Enums.SL, type, SLResourceRecorder.getRegion(),
 				UUID.randomUUID().toString());
@@ -175,6 +135,16 @@ public class SLResourceRecorder extends RDSRecorder {
 	}
 
 	public List<Hooker<?, ?>> getHookers(HookerType hookerType) {
+		return getHookers(hookerType,new HashMap<String,String>());
+	}
+
+	public List<Hooker<?, ?>> getHookers(HookerType hookerType,Command command) {
+		Map<String, String> query = new HashMap<String, String>();
+		query.put(FIELD_COMMAND, command.toString());
+		return getHookers(hookerType,query);
+	}
+	
+	public List<Hooker<?, ?>> getHookers(HookerType hookerType,Map<String,String> query) {
 		List<Hooker<?, ?>> hookers = new ArrayList<Hooker<?, ?>>();
 
 		Type type = null;
@@ -189,7 +159,7 @@ public class SLResourceRecorder extends RDSRecorder {
 			type = new TypeToken<Hooker<AllocatePortCommandArgs, AllocatePortPayload>>() {
 			}.getType();
 		}
-		List<Event> events = this.findEvents(Enums.SL, hookerType, new HashMap<String, String>());
+		List<Event> events = this.findEvents(Enums.SL, hookerType, query);
 		for (Event event : events) {
 			Hooker<?, ?> hooker = new Gson().fromJson(event.field("json"), type);
 			hooker.setId(event.id());
@@ -198,41 +168,12 @@ public class SLResourceRecorder extends RDSRecorder {
 		return hookers;
 	}
 
-	public List<PortHooker> getPortHookers() {
-		return getPortHookers(new HashMap<String, String>());
-	}
 
-	public List<PortHooker> getPortHookers(Command command) {
-
-		Map<String, String> query = new HashMap<String, String>();
-		query.put(FIELD_COMMAND, command.toString());
-		return getPortHookers(query);
-	}
-
-	public List<PortHooker> getPortHookers(Command command, String uuid) {
-
-		Map<String, String> query = new HashMap<String, String>();
-		query.put(FIELD_COMMAND, command.toString());
-		query.put(FIELD_UUID, uuid);
-
-		return getPortHookers(query);
-	}
-
-	// public List<PortHooker> getPortHookersByCustomerId(String command, String
-	// customerId) {
-	//
-	// Map<String, String> query = new HashMap<String, String>();
-	// query.put("command", command);
-	// query.put("customerId", customerId);
-	//
-	// return getPortHookers(query);
-	// }
-
-	public PortHooker getPortHookerByMessageId(String messageId) {
+	public Hooker<?,?> getHookerByMessageId(HookerType type,String messageId) {
 		Map<String, String> query = new HashMap<String, String>();
 		query.put(FIELD_MSGID, messageId);
 
-		List<PortHooker> hookers = getPortHookers(query);
+		List<Hooker<?,?>> hookers = getHookers(type,query);
 
 		if (hookers == null || hookers.isEmpty()) {
 			return null;
@@ -240,20 +181,20 @@ public class SLResourceRecorder extends RDSRecorder {
 
 		return hookers.get(0);
 	}
-
-	public List<PortHooker> getPortHookers(Map<String, String> query) {
-		List<PortHooker> hookers = new ArrayList<PortHooker>();
-		Calendar cal = Calendar.getInstance();
-		cal.setTimeInMillis(0);
-
-		List<Event> events = this.findEvents(Enums.SL, HookerType.PORT, query);
-		for (Event event : events) {
-			PortHooker hooker = new Gson().fromJson(event.field("json"), PortHooker.class);
-			hooker.setId(event.id());
-			hookers.add(hooker);
-		}
-		return hookers;
-	}
+//
+//	public List<PortHooker> getPortHookers(Map<String, String> query) {
+//		List<PortHooker> hookers = new ArrayList<PortHooker>();
+//		Calendar cal = Calendar.getInstance();
+//		cal.setTimeInMillis(0);
+//
+//		List<Event> events = this.findEvents(Enums.SL, HookerType.PORT, query);
+//		for (Event event : events) {
+//			PortHooker hooker = new Gson().fromJson(event.field("json"), PortHooker.class);
+//			hooker.setId(event.id());
+//			hookers.add(hooker);
+//		}
+//		return hookers;
+//	}
 
 	public List<Event> findEvents(MonkeyType monkeyType, EventType eventType, Map<String, String> query) {
 		ArrayList<Object> args = new ArrayList<>();

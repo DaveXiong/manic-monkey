@@ -11,11 +11,11 @@ import console.mw.sl.service.schema.TemplateResponse;
  * @author dxiong
  *
  */
-public class ProcessingHooker extends Hooker<Object, Object> {
-	public ProcessingHooker() {
+public class PingHooker extends Hooker<Object, Object> {
+	public PingHooker() {
 		TemplateResponse<Object> response = new TemplateResponse<Object>();
-		response.setCode(100);
-		response.setMessage("You request is processing");
+		response.setCode(200);
+		response.setMessage("Pong");
 		this.setResponse(response);
 		
 		TemplateRequest<Object> request = new TemplateRequest<Object>();

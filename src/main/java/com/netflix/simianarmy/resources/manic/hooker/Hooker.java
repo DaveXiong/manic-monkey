@@ -14,6 +14,8 @@ import console.mw.sl.service.schema.TemplateResponse;
  */
 public class Hooker<T, R> {
 
+	public static final String PARAMETER_DELAY = "delay";
+	
 	private String id;
 
 	private HookerType type = HookerType.PORT;
