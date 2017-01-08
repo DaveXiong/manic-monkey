@@ -4,7 +4,9 @@
 package com.netflix.simianarmy.manic;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -17,12 +19,15 @@ import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.EventType;
 import com.netflix.simianarmy.FeatureNotEnabledException;
 import com.netflix.simianarmy.InstanceGroupNotFoundException;
+import com.netflix.simianarmy.MonkeyCalendar;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.chaos.BasicChaosMonkey;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;
 import com.netflix.simianarmy.chaos.ChaosInstance;
 import com.netflix.simianarmy.chaos.ChaosType;
 import com.netflix.simianarmy.chaos.SshConfig;
+
+import console.mw.monitor.slack.SlackMessage;
 
 /**
  * @author dxiong
@@ -40,6 +45,8 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 	private Slack slack;
 
 	private ManicInstanceSelector instanceSelector;
+
+	private Map<String, ChaosType> instance2Rollback = new HashMap<String, ChaosType>();
 
 	public ManicChaosMonkey(Context ctx) {
 		super(ctx);
@@ -71,7 +78,6 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_PAUSE, null,
 				UUID.randomUUID().toString()));
 		LOGGER.info("Pause:" + this);
-
 	}
 
 	public synchronized void resume() {
@@ -79,6 +85,35 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		context().recorder().recordEvent(context().recorder().newEvent(this.type(), ManicEventTypes.MONKEY_RESUME, null,
 				UUID.randomUUID().toString()));
 		LOGGER.info("Resume:" + this);
+	}
+
+	public synchronized void monkeyTimeChanged(boolean isMonkeyTime, int openHour, int closeHour) {
+
+		LOGGER.info("isMonkeyTime:" + isMonkeyTime + ",working hours[" + openHour + "," + closeHour + "]");
+		SlackMessage message = new SlackMessage();
+		String title = "";
+		if (isMonkeyTime) {
+			title = "Now is monkey time,work hours[" + openHour + "," + closeHour + "]";
+		} else {
+			title = "Now is not monkey time,work hours[" + openHour + "," + closeHour + "]";
+		}
+		message.setText(title);
+		slack.sendToSlack(message);
+
+		if (!isMonkeyTime) {
+			// rollback all services to original status
+			for (String key : instance2Rollback.keySet()) {
+				ChaosType chaosType = instance2Rollback.get(key);
+				SshConfig sshConfig = new SshConfig(context().configuration());
+
+				ChaosInstance instance = new ChaosInstance(context().cloudClient(), key, sshConfig);
+				if (chaosType.canApply(instance)) {
+					chaosType.apply(instance);
+				}
+			}
+			
+			instance2Rollback.clear();
+		}
 	}
 
 	public synchronized boolean isPaused() {
@@ -126,6 +161,16 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 		return applicable.get(index);
 	}
 
+	protected ChaosType pickChaosType(String key) {
+		for (ChaosType chaosType : allChaosTypes) {
+			if (chaosType.getKey().equalsIgnoreCase(key)) {
+				return chaosType;
+			}
+		}
+		return null;
+
+	}
+
 	public void doMonkeyBusiness() {
 		context().resetEventReport();
 		cfg.reload();
@@ -146,7 +191,18 @@ public class ManicChaosMonkey extends BasicChaosMonkey {
 
 				Collection<String> instances = instanceSelector.select(group, chaosType);
 				for (String inst : instances) {
-					terminateInstance(group, inst, chaosType);
+					if (terminateInstance(group, inst, chaosType) != null) {
+						if (!instance2Rollback.containsKey(inst)) {
+							switch (chaosType.getKey()) {
+							case "StartInstance":
+								instance2Rollback.put(inst, pickChaosType("ShutdownInstance"));
+								break;
+							case "ShutdownInstance":
+								instance2Rollback.put(inst, pickChaosType("StartInstance"));
+								break;
+							}
+						}
+					}
 				}
 			}
 		}

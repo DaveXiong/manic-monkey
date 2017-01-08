@@ -3,9 +3,9 @@
  */
 package com.netflix.simianarmy.client.gcloud;
 
-import com.netflix.simianarmy.basic.BasicCalendar;
 import com.netflix.simianarmy.basic.LocalDbRecorder;
 import com.netflix.simianarmy.basic.chaos.BasicChaosInstanceSelector;
+import com.netflix.simianarmy.manic.ManicBasicCalendar;
 
 /**
  * @author dxiong
@@ -50,7 +50,7 @@ public interface Definitions {
 
 	public interface Calendar {
 		String CLASS = "simianarmy.calendar.class";
-		String CLASS_DEFAULT = BasicCalendar.class.getName();
+		String CLASS_DEFAULT = ManicBasicCalendar.class.getName();
 	}
 
 	public interface InstanceSelector {
