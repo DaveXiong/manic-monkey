@@ -376,5 +376,129 @@ event can be one of
               "group":"activemq"
            }
         }
+
+## Hooker management [/hooker]
+
+### get all avaliable hooker types [GET]
+
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "types": [
+            "PORT",
+            "CONNECTION",
+            "CR",
+            "PEER",
+            "AWS"
+            
+          ]
+        }
+    
+## Read/Create a hooker [/{hookerType}]
+- Parameters
+  - hookerType (string `PORT`) ... hooker type
+
+### get all hookers [GET]
+
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {  
+           "results":[  
+              {  
+                 "id":"123454",
+                 "type":"PORT",
+                 "action":"DEFAULT",
+                 "parameters":{
+                    
+                 },
+                 
+                 "request":{
+                    
+                 },
+                 
+                 "response":{
+                    
+                 }
+              }
+           ]
+        }
                   
-  
+### add a hooker [PUT]
+
+
++ Request (application/json)
+
+        {  
+           "action":"DEFAULT",
+           "request":{  
+              "command":"/port/enable",
+              "command_args":{  
+                 "port_uuid":"123"
+              }
+           },
+           "response":{  
+              "code":200,
+              "message":"This is from JIRA ticket heheh"
+           }
+        }
+        
+        
++ Response 200 (application/json)
+
+        {  
+           "action":"DEFAULT",
+           "request":{  
+              "command":"/port/enable",
+              "command_args":{  
+                 "port_uuid":"123"
+              }
+           },
+           "response":{  
+              "code":200,
+              "message":"This is from JIRA ticket heheh"
+           }
+        }
+        
+        
+## Delete a hooker [/{hookerId}]
+- Parameters
+  - hookerId (string `123455`) ... hooker uuid
+
+### delete a hooker [DELETE]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+
+## Enable hookers for a feature [/{feature}/{action}]
+- Parameters
+  - feature (string `L2`) ... feature name
+  - action (string `enable`) ... action
+
+
+### enable or disable hookers for a feature [POST]
+
+feature can be one of 
+- L2
+- L3
+- POP
+- DCP
+
+action can be one of
+- enable
+- disable
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+
+
+        
