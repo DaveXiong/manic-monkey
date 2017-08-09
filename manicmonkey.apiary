@@ -374,7 +374,8 @@ event can be one of
                 "status":"STOPPING",
                 "previousStatus":"RUNNING",
                 "name":"ci-messaging-activemq-2",
-                "group":"activemq"
+                "group":"activemq",
+                "region":"us-central1-a"
             }
         }
 
@@ -393,7 +394,9 @@ event can be one of
            "createdAt":1478219800035,
            "payload":{
               "name":"ci-messaging-activemq-2",
-              "group":"activemq"
+              "group":"activemq",
+              "region":"us-central1-a"
+              
            }
         }
                   
