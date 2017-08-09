@@ -19,7 +19,6 @@ import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.EventType;
 import com.netflix.simianarmy.FeatureNotEnabledException;
 import com.netflix.simianarmy.InstanceGroupNotFoundException;
-import com.netflix.simianarmy.MonkeyCalendar;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.basic.chaos.BasicChaosMonkey;
 import com.netflix.simianarmy.chaos.ChaosCrawler.InstanceGroup;

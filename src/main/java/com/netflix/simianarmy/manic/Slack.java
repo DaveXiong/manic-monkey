@@ -39,7 +39,7 @@ public class Slack implements EventListener {
 				Definitions.Notifier.SLACK.CHANNEL_DEFAULT);
 		this.agent = monkey.context().configuration().getStrOrElse(Definitions.Notifier.SLACK.AGENT,
 				Definitions.Notifier.SLACK.AGENT_DEFAULT);
-		
+
 		MonkeyEventDispatcher.INSTANCE.subscribe(this);
 	}
 
@@ -148,15 +148,16 @@ public class Slack implements EventListener {
 
 		InstancePayload payload = (InstancePayload) evt.getPayload();
 
+		String name = String.format("%s(%s)", payload.getName(), payload.getRegion());
 		if (evt.getCommand() == Command.STATUS_UPDATE) {
-			message.setText(payload.getName() + " changed status from " + payload.getPreviousStatus() + " to "
-					+ payload.getStatus());
+			message.setText(String.format("%s changed status from %s to %s", name, payload.getPreviousStatus(),
+					payload.getStatus()));
 		} else {
-			message.setText(evt.getCommand() + " " + payload.getName());
+			message.setText(String.format("%s %s", evt.getCommand(), name));
 		}
 		return message;
 	}
-	
+
 	private SlackMessage systemEvent2Message(ManicEvent evt) {
 		SlackMessage message = new SlackMessage();
 
