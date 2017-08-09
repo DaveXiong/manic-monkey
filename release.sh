@@ -16,13 +16,18 @@ git push iixlabs $BRANCH --tags
 
 PROJECT="${PWD##*/}"
 
-export RELEASE_BRANCH=$BRANCH
-export RELEASE_TAG=$TAG
-export RELEASE_TAG_PREFIX='MONKEY-'
 export RELEASE_PROJECT=$PROJECT
-export RELEASE_CHANNEL='#manic-monkey'
-export SEARCHBY='labels'
 
-java -jar toolkit/release-java-LATEST.jar
+echo ${RELEASE_PROJECT}
+
+export RELEASE_VERSION_PREFIX='WFE-'
+export RELEASE_VERSION=$TAG
+export RELEASE_URL="https://github.com/iixlabs/"$PROJECT"/releases/tag/"$TAG;
+
+jira-release-notes
+
+git push
+
+git stash pop
 
 fi
