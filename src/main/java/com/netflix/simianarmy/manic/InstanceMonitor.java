@@ -66,7 +66,7 @@ public class InstanceMonitor implements Runnable {
 			
 			for (String tag : instance.getTags()) {
 
-				InstanceGroup group = new BasicInstanceGroup(tag, Types.TAG, client.getZone(), null);
+				InstanceGroup group = new BasicInstanceGroup(tag, Types.TAG, instance.getZone(), null);
 
 				if (monkey.isGroupEnabled(group)) {
 					
@@ -85,7 +85,7 @@ public class InstanceMonitor implements Runnable {
 		name2Group.clear();
 
 		for (String tag : tags) {
-			name2Group.put(tag, new BasicInstanceGroup(tag, Types.TAG, client.getZone(), null));
+			name2Group.put(tag, new BasicInstanceGroup(tag, Types.TAG, null, null));
 		}
 
 		LOGGER.info("all enabled groups:" + tags);
@@ -118,6 +118,7 @@ public class InstanceMonitor implements Runnable {
 						payload.setName(instance.getName());
 						payload.setStatus(instance.getStatus());
 						payload.setPreviousStatus(existingInstance.getStatus());
+						payload.setRegion(instance.getZone());
 						event.setPayload(payload);
 						MonkeyEventDispatcher.INSTANCE.dispatch(event);
 					}

@@ -51,7 +51,9 @@ public class ManicWebSocket {
 				if (evt.getType() == ManicEvent.Type.MONKEY || evt.getType() == ManicEvent.Type.INSTANCE) {
 					if (session.isOpen()) {
 						try {
-							session.getBasicRemote().sendText(new Gson().toJson(evt));
+							String data = new Gson().toJson(evt);
+							LOGGER.info("WEBSOCKET:" + data);
+							session.getBasicRemote().sendText(data);
 						} catch (IOException e) {
 							e.printStackTrace();
 							onClose(session);

@@ -7,7 +7,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,13 +36,16 @@ public class Gce {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Gce.class);
 
 	protected String project;
-	protected String zone;
+	// protected String zone;
+	protected String [] zones;
 
 	protected Compute computeService;
 
+	private static final Map<String, Instance> name2Instance = new HashMap<String, Instance>();
+
 	public Gce(String credential, String project, String zone) throws Exception {
 		this.project = project;
-		this.zone = zone;
+		this.zones = zone.split(",");
 
 		FileInputStream inputstream = new FileInputStream(credential);
 		GoogleCredential googleCredential = GoogleCredential.fromStream(inputstream);
@@ -63,8 +68,15 @@ public class Gce {
 		computeService = new Compute.Builder(httpTransport, jsonFactory, googleCredential)
 				.setApplicationName("Google Cloud Platform Sample").build();
 	}
+	
+	public static String getRegion(String id) {
+		if (name2Instance.containsKey(id)) {
+			return name2Instance.get(id).zone;
+		}
+		return null;
+	}
 
-	protected List<com.google.api.services.compute.model.Instance> internalList() throws IOException {
+	protected List<com.google.api.services.compute.model.Instance> internalList(String zone) throws IOException {
 		Compute.Instances.List request = computeService.instances().list(project, zone);
 		InstanceList response;
 
@@ -83,22 +95,36 @@ public class Gce {
 		return instances;
 	}
 
+	private String[] getZones() {
+		return this.zones;
+	}
+
 	public List<Instance> list() throws IOException {
 
 		List<Instance> instances = new ArrayList<Instance>();
 
-		for (com.google.api.services.compute.model.Instance instance : internalList()) {
-			Instance ins = new Instance(instance.getId().longValue(), instance.getName(),
-					Status.parse(instance.getStatus()));
+		for (String zone : getZones()) {
 
-			Tags tag = instance.getTags();
-			if (tag != null && tag.getItems() != null) {
-				ins.setTags(tag.getItems());
-			} else {
-				ins.setTags(new ArrayList<String>());
+			for (com.google.api.services.compute.model.Instance instance : internalList(zone)) {
+				Instance ins = new Instance(instance.getId().longValue(), instance.getName(),
+						Status.parse(instance.getStatus()), zone);
+
+				Tags tag = instance.getTags();
+				if (tag != null && tag.getItems() != null) {
+					ins.setTags(tag.getItems());
+				} else {
+					ins.setTags(new ArrayList<String>());
+				}
+
+				instances.add(ins);
 			}
 
-			instances.add(ins);
+		}
+
+		synchronized (name2Instance) {
+			for (Instance instance : instances) {
+				name2Instance.put(instance.getName(), instance);
+			}
 		}
 
 		return instances;
@@ -107,49 +133,60 @@ public class Gce {
 	public List<InstanceGroup> listGroups() throws IOException {
 		List<InstanceGroup> groups = new ArrayList<InstanceGroup>();
 
-		Compute.InstanceGroups.List request = computeService.instanceGroups().list(project, zone);
-		InstanceGroupList response;
-		do {
-			response = request.execute();
-			if (response.getItems() == null)
-				continue;
+		for (String zone : getZones()) {
+			Compute.InstanceGroups.List request = computeService.instanceGroups().list(project, zone);
+			InstanceGroupList response;
+			do {
+				response = request.execute();
+				if (response.getItems() == null)
+					continue;
 
-			for (com.google.api.services.compute.model.InstanceGroup g : response.getItems()) {
-				groups.add(new BasicInstanceGroup(g.getName(), Types.ASG, g.getRegion(), null));
-			}
-			request.setPageToken(response.getNextPageToken());
-		} while (response.getNextPageToken() != null);
+				for (com.google.api.services.compute.model.InstanceGroup g : response.getItems()) {
+					groups.add(new BasicInstanceGroup(g.getName(), Types.ASG, g.getRegion(), null));
+				}
+				request.setPageToken(response.getNextPageToken());
+			} while (response.getNextPageToken() != null);
 
+		}
 		return groups;
 	}
 
 	public List<Instance> list(String group) throws IOException {
-		Compute.InstanceGroups.ListInstances request = computeService.instanceGroups().listInstances(project, zone,
-				group, null);
-		com.google.api.services.compute.model.InstanceGroupsListInstances response;
 
 		List<Instance> instances = new ArrayList<Instance>();
-		do {
-			response = request.execute();
-			if (response.getItems() == null)
-				continue;
 
-			for (com.google.api.services.compute.model.InstanceWithNamedPorts instance : response.getItems()) {
-				LOGGER.info(instance.getInstance() + ":" + instance.getStatus());
-				// TODO
-				// instances.add(new Instance(instance.getId().longValue(),
-				// instance.getName(), instance.getStatus()));
-			}
-			request.setPageToken(response.getNextPageToken());
-		} while (response.getNextPageToken() != null);
+		for (String zone : getZones()) {
+			Compute.InstanceGroups.ListInstances request = computeService.instanceGroups().listInstances(project, zone,
+					group, null);
+			com.google.api.services.compute.model.InstanceGroupsListInstances response;
 
+			do {
+				response = request.execute();
+				if (response.getItems() == null)
+					continue;
+
+				for (com.google.api.services.compute.model.InstanceWithNamedPorts instance : response.getItems()) {
+					LOGGER.info(instance.getInstance() + ":" + instance.getStatus());
+					// TODO
+					// instances.add(new Instance(instance.getId().longValue(),
+					// instance.getName(), instance.getStatus()));
+				}
+				request.setPageToken(response.getNextPageToken());
+			} while (response.getNextPageToken() != null);
+
+		}
+
+		for (Instance instance : instances) {
+			name2Instance.put(instance.getName(), instance);
+		}
 		return instances;
 	}
 
-	public Instance get(String id) throws IOException {
+	public Instance get(String id, String zone) throws IOException {
 		Compute.Instances.Get getRequest = computeService.instances().get(project, zone, id);
 		com.google.api.services.compute.model.Instance instance = getRequest.execute();
-		Instance ins = new Instance(instance.getId().longValue(), instance.getName(), Status.parse(instance.getStatus()));
+		Instance ins = new Instance(instance.getId().longValue(), instance.getName(),
+				Status.parse(instance.getStatus()), zone);
 		Tags tag = instance.getTags();
 		if (tag != null && tag.getItems() != null) {
 			ins.setTags(tag.getItems());
@@ -159,32 +196,90 @@ public class Gce {
 		return ins;
 	}
 
-	public Instance stop(String id) throws IOException {
+	public Instance get(String id) throws IOException {
+		Instance instance = name2Instance.get(id);
+		if (instance != null) {
+			return get(id, instance.getZone());
+		} else {
+			for (String zone : getZones()) {
+				try {
+					Instance in = get(id, zone);
+					if (in != null) {
+						return instance;
+					}
+				} catch (IOException ex) {
+
+				}
+			}
+		}
+
+		throw new RuntimeException("Can't find instance " + id);
+
+	}
+
+	public Instance stop(String id, String zone) throws IOException {
 		LOGGER.info("stop {} in project:{}, zone:{}", new Object[] { id, project, zone });
 		Compute.Instances.Stop stopRequest = computeService.instances().stop(project, zone, id);
 		stopRequest.execute();
 
-		return get(id);
-
+		return get(id, zone);
 	}
 
-	public Instance start(String id) throws IOException {
+	public Instance stop(String id) throws IOException {
+
+		Instance instance = name2Instance.get(id);
+		if (instance != null) {
+			return stop(id, instance.getZone());
+		}
+
+		for (String zone : getZones()) {
+			try {
+				Instance inst = stop(id, zone);
+				if (inst != null) {
+					return inst;
+				}
+			} catch (IOException ex) {
+
+			}
+		}
+
+		throw new RuntimeException("Can't find instance " + id);
+	}
+
+	public Instance start(String id, String zone) throws IOException {
 		LOGGER.info("start {} in project:{}, zone:{}", new Object[] { id, project, zone });
 
 		Compute.Instances.Start stopRequest = computeService.instances().start(project, zone, id);
 		stopRequest.execute();
 
-		return get(id);
+		return get(id, zone);
+	}
+
+	public Instance start(String id) throws IOException {
+		Instance instance = name2Instance.get(id);
+		if (instance != null) {
+			return start(id, instance.getZone());
+		}
+		for (String zone : getZones()) {
+			try {
+				Instance inst = start(id, zone);
+				if (inst != null) {
+					return inst;
+				}
+			} catch (IOException ex) {
+
+			}
+		}
+
+		throw new RuntimeException("Can't find instance " + id);
 	}
 
 	public Instance suspend(String id) throws IOException {
-		LOGGER.info("suspend {} in project:{}, zone:{}", new Object[] { id, project, zone });
 
 		throw new UnsupportedOperationException();
 	}
 
 	public Instance resume(String id) throws IOException {
-		LOGGER.info("resume {} in project:{}, zone:{}", new Object[] { id, project, zone });
 
 		throw new UnsupportedOperationException();
 	}
@@ -197,13 +292,13 @@ public class Gce {
 		this.project = project;
 	}
 
-	public String getZone() {
-		return zone;
-	}
-
-	public void setZone(String zone) {
-		this.zone = zone;
-	}
+	// public String getZone() {
+	// return zone;
+	// }
+	//
+	// public void setZone(String zone) {
+	// this.zone = zone;
+	// }
 
 	public static enum Status {
 		PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, TERMINATED, UNKNOWN;
@@ -223,11 +318,13 @@ public class Gce {
 		private String name;
 		private Status status;
 		private List<String> tags;
+		private String zone;
 
-		public Instance(Long id, String name, Status status) {
+		public Instance(Long id, String name, Status status, String zone) {
 			this.id = id;
 			this.name = name;
 			this.status = status;
+			this.zone = zone;
 		}
 
 		public long getId() {
@@ -262,6 +359,19 @@ public class Gce {
 			this.tags = tags;
 		}
 
-	}
+		public String getZone() {
+			return zone;
+		}
 
+		public void setZone(String zone) {
+			this.zone = zone;
+		}
+
+		@Override
+		public String toString() {
+			return "Instance [id=" + id + ", name=" + name + ", status=" + status + ", tags=" + tags + ", zone=" + zone
+					+ "]";
+		}
+
+	}
 }
