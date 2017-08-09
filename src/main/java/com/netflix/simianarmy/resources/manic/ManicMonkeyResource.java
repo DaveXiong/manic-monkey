@@ -212,6 +212,7 @@ public class ManicMonkeyResource {
 					gen.writeStartObject();
 					gen.writeStringField("name", instance.getName());
 					gen.writeStringField("status", instance.getStatus().toString());
+					gen.writeStringField("region", instance.getZone());
 					gen.writeEndObject();
 				}
 				gen.writeEndArray();
@@ -254,6 +255,7 @@ public class ManicMonkeyResource {
 			gen.writeStartObject();
 			gen.writeStringField("name", instance.getName());
 			gen.writeStringField("status", instance.getStatus().name());
+			gen.writeStringField("region", instance.getZone());
 			gen.writeEndObject();
 		}
 		gen.writeEndArray();
@@ -288,6 +290,7 @@ public class ManicMonkeyResource {
 			gen.writeStartObject();
 			gen.writeStringField("name", instance.getName());
 			gen.writeStringField("status", instance.getStatus().name());
+			gen.writeStringField("region",instance.getZone());
 			gen.writeEndObject();
 
 			gen.close();
