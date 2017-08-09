@@ -124,6 +124,14 @@ public class ManicMonkeyResource {
 		}
 		gen.writeEndArray();
 
+		gen.writeArrayFieldStart("regions");
+
+		String regions = monkey.context().configuration()
+				.getStr(com.netflix.simianarmy.client.gcloud.Definitions.GCloud.ZONE);
+		for (String region : regions.split(",")) {
+			gen.writeString(region);
+		}
+		gen.writeEndArray();
 		gen.writeEndObject();
 
 		gen.close();
@@ -131,10 +139,10 @@ public class ManicMonkeyResource {
 	}
 
 	/**
-	 * Gets the chaos events. Creates GET /api/v1/chaos api which outputs the
-	 * chaos events in json. Users can specify cgi query params to filter the
-	 * results and use "since" query param to set the start of a timerange.
-	 * "since" should be specified in milliseconds since the epoch.
+	 * Gets the chaos events. Creates GET /api/v1/chaos api which outputs the chaos
+	 * events in json. Users can specify cgi query params to filter the results and
+	 * use "since" query param to set the start of a timerange. "since" should be
+	 * specified in milliseconds since the epoch.
 	 *
 	 * @param uriInfo
 	 *            the uri info
@@ -185,6 +193,46 @@ public class ManicMonkeyResource {
 		}
 		gen.writeEndArray();
 		gen.writeEndObject();
+		gen.close();
+		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
+	}
+
+	@GET
+	@Path("/region/{region}")
+	public Response getInstancesByRegion(@PathParam("region") String region) throws IOException {
+
+		List<InstanceGroup> groups = monkey.context().chaosCrawler().groups();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		gen.writeStartObject();
+		gen.writeArrayFieldStart("results");
+		for (InstanceGroup group : groups) {
+			gen.writeStartObject();
+			gen.writeStringField("name", group.name());
+			gen.writeBooleanField("enabled", monkey.isGroupEnabled(group));
+
+			if (monkey.context().cloudClient() instanceof BasicClient) {
+				BasicClient client = (BasicClient) monkey.context().cloudClient();
+				gen.writeArrayFieldStart("instances");
+				for (Instance instance : client.list(group.name())) {
+					if (instance.getZone().equalsIgnoreCase(region)) {
+						gen.writeStartObject();
+						gen.writeStringField("name", instance.getName());
+						gen.writeStringField("status", instance.getStatus().toString());
+						gen.writeStringField("region", instance.getZone());
+						gen.writeEndObject();
+					}
+				}
+				gen.writeEndArray();
+			}
+
+			gen.writeEndObject();
+		}
+		gen.writeEndArray();
+		gen.writeEndObject();
+
 		gen.close();
 		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
 	}
@@ -290,7 +338,7 @@ public class ManicMonkeyResource {
 			gen.writeStartObject();
 			gen.writeStringField("name", instance.getName());
 			gen.writeStringField("status", instance.getStatus().name());
-			gen.writeStringField("region",instance.getZone());
+			gen.writeStringField("region", instance.getZone());
 			gen.writeEndObject();
 
 			gen.close();
@@ -367,7 +415,7 @@ public class ManicMonkeyResource {
 
 			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
 		}
-		
+
 		String chaosTypeName = null;
 		switch (action) {
 		case start:
@@ -410,7 +458,7 @@ public class ManicMonkeyResource {
 
 			return Response.status(Response.Status.BAD_REQUEST).entity(baos.toString("UTF-8")).build();
 		}
-		
+
 		String chaosTypeName = null;
 		switch (action) {
 		case start:
@@ -422,7 +470,7 @@ public class ManicMonkeyResource {
 		default:
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
-		
+
 		ChaosType chaosType = ChaosType.parse(monkey.getChaosTypes(), chaosTypeName);
 
 		addTerminationEvent(BasicChaosCrawler.Types.TAG.name(), group, chaosType, instance, gen);
@@ -479,7 +527,7 @@ public class ManicMonkeyResource {
 				List<String> instances = new ArrayList<String>();
 				instances.addAll(group.instances());
 				for (String instance : instances) {
-					System.out.println("terminate:"+instance+","+group);
+					System.out.println("terminate:" + instance + "," + group);
 
 					addTerminationEvent(groupType, groupName, chaosType, instance, gen);
 				}
