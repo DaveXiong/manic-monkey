@@ -118,6 +118,7 @@ public class InstanceMonitor implements Runnable {
 						payload.setName(instance.getName());
 						payload.setStatus(instance.getStatus());
 						payload.setPreviousStatus(existingInstance.getStatus());
+						payload.setRegion(instance.getZone());
 						event.setPayload(payload);
 						MonkeyEventDispatcher.INSTANCE.dispatch(event);
 					}

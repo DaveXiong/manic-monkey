@@ -6,7 +6,6 @@ package com.netflix.simianarmy.client.gcloud;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +41,7 @@ public class Gce {
 
 	protected Compute computeService;
 
-	private Map<String, Instance> name2Instance = new HashMap<String, Instance>();
+	private static final Map<String, Instance> name2Instance = new HashMap<String, Instance>();
 
 	public Gce(String credential, String project, String zone) throws Exception {
 		this.project = project;
@@ -68,6 +67,13 @@ public class Gce {
 		JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
 		computeService = new Compute.Builder(httpTransport, jsonFactory, googleCredential)
 				.setApplicationName("Google Cloud Platform Sample").build();
+	}
+	
+	public static String getRegion(String id) {
+		if (name2Instance.containsKey(id)) {
+			return name2Instance.get(id).zone;
+		}
+		return null;
 	}
 
 	protected List<com.google.api.services.compute.model.Instance> internalList(String zone) throws IOException {
@@ -368,21 +374,4 @@ public class Gce {
 		}
 
 	}
-
-	public static void main(String[] args) throws Exception {
-//		Gce gce = new Gce("/home/dxiong/Downloads/google-cloud-sdk/dxiong-iix-dev.json", "iix-dev-environment",
-//				"us-central1-a");
-//		for (Instance instance : gce.list()) {
-//			System.out.println(instance);
-//		}
-		
-		List<String> list = Arrays.asList("1,2,3");
-		for(String a:list) {
-			System.out.println(a);;
-		}
-		for(String str:list.toArray(new String[list.size()])){
-			System.out.println(str);
-		}
-	}
-
 }

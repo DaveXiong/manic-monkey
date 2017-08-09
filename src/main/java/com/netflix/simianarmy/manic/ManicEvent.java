@@ -107,6 +107,7 @@ public class ManicEvent {
 		private Status previousStatus;
 		private String name;
 		private String group;
+		private String region;
 
 		public Status getStatus() {
 			return status;
@@ -138,6 +139,14 @@ public class ManicEvent {
 
 		public void setPreviousStatus(Status previousStatus) {
 			this.previousStatus = previousStatus;
+		}
+		
+		public String getRegion() {
+			return this.region;
+		}
+		
+		public void setRegion(String region) {
+			this.region = region;
 		}
 		
 		

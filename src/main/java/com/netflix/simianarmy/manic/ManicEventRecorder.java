@@ -7,6 +7,7 @@ import com.netflix.simianarmy.MonkeyConfiguration;
 import com.netflix.simianarmy.aws.RDSRecorder;
 import com.netflix.simianarmy.chaos.ChaosMonkey;
 import com.netflix.simianarmy.client.gcloud.Definitions;
+import com.netflix.simianarmy.client.gcloud.Gce;
 import com.netflix.simianarmy.manic.ManicChaosMonkey.ManicEventTypes;
 import com.netflix.simianarmy.manic.ManicEvent.Command;
 import com.netflix.simianarmy.manic.ManicEvent.InstancePayload;
@@ -42,6 +43,7 @@ public class ManicEventRecorder extends RDSRecorder {
 			InstancePayload payload = new InstancePayload();
 			payload.setName(evt.id());
 			payload.setGroup(evt.field("groupName"));
+			payload.setRegion(evt.field("region"));
 			event.setPayload(payload);
 
 			return event;
@@ -73,6 +75,7 @@ public class ManicEventRecorder extends RDSRecorder {
 	}
 
 	public void recordEvent(Event evt) {
+		evt.addField("region", Gce.getRegion(evt.id()));
 		MonkeyEventDispatcher.INSTANCE.dispatch(toManicEvent(evt));
 		super.recordEvent(evt);
 	}
