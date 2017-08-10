@@ -95,7 +95,11 @@ monkey.enabled = true means the monkey is running random in the backgroud, other
               "name": "StartInstance",
               "enabled": true
             }
-          ]
+          ],
+          "regions": [
+        	"us-central1-a",
+        	"us-east1-b"
+    	  ]
         }
 
 ## Monkey management [/{action}(pause|resume)]
@@ -245,7 +249,7 @@ instance.status can be one of
             {
               "name": "ci-messaging-activemq-1",
               "status": "STAGING",
-                               "region":"us-central1-a"
+              "region":"us-central1-a"
             },
             {
               "name": "ci-messaging-activemq-2",
@@ -293,6 +297,152 @@ instance.status can be one of
           "name": "ci-messaging-activemq-1",
           "status": "TERMINATED",
           "region":"us-central1-a"
+        }
+ 
+ 
+ ## Group detail [/group/{group}]
+- Parameters
+  - group (string `activemq`) ... group name
+
+### get a group detail [GET]
+
+instance.status can be one of
+- PROVISIONING
+- STAGING
+- RUNNING
+- STOPPING
+- SUSPENDING
+- SUSPENDED
+- TERMINATED
+- UNKNOWN
+
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {  
+           "name":"activemq",
+           "enabled":true,
+           "instances":[  
+              {  
+                 "name":"ci-messaging-activemq-1",
+                 "status":"RUNNING",
+                 "region":"us-central1-a"
+                 
+              },
+              {  
+                 "name":"ci-messaging-activemq-2",
+                 "status":"TERMINATED",
+                 "region":"us-central1-a"
+              },
+              {  
+                 "name":"ci-messaging-activemq-3",
+                 "status":"RUNNING",
+				 "region":"us-central1-a"
+              }
+           ]
+        }
+
+## Group management [/group/{group}/{action}(start|stop)]
+- Parameters
+  - group (string `activemq`) ... group name
+  - action (string `start`) ... action for the group
+
+### start/stop all instances in the group [POST]
+
+- start
+    - STAGING --> PROVISIONING --> RUNNING
+- stop
+    - STOPPING --> TERMINATED
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "enabled": true,
+          "results": [
+            {
+              "name": "ci-messaging-activemq-1",
+              "status": "STAGING",
+              "region":"us-central1-a"
+            },
+            {
+              "name": "ci-messaging-activemq-2",
+              "status": "PROVISIONING",
+              "region":"us-central1-a"
+            },
+            {
+              "name": "ci-messaging-activemq-3",
+              "status": "RUNNING",
+              "region":"us-central1-a"
+            }
+          ]
+        }
+ 
+ ////
+## Region detail [/region/{region}]
+- Parameters
+  - region (string `us-west-1`) ... region name
+
+### get all instances in a region [GET]
+
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {  
+           "results":[  
+              {  
+                 "name":"ci-messaging-activemq-1",
+                 "status":"RUNNING",
+                 "region":"us-central1-a"
+                 
+              },
+              {  
+                 "name":"ci-messaging-activemq-2",
+                 "status":"TERMINATED",
+                 "region":"us-central1-a"
+              },
+              {  
+                 "name":"ci-messaging-activemq-3",
+                 "status":"RUNNING",
+				 "region":"us-central1-a"
+              }
+           ]
+        }
+
+## Region management [/region/{region}/{action}(start|stop)]
+- Parameters
+  - region (string `us-west-1`) ... region name
+  - action (string `start`) ... action for the region
+
+### start/stop all instances in the region [POST]
+
++ Request (application/json)
+
++ Response 200 (application/json)
+
+        {
+          "results": [
+            {
+              "name": "ci-messaging-activemq-1",
+              "status": "STAGING",
+              "region":"us-central1-a"
+            },
+            {
+              "name": "ci-messaging-activemq-2",
+              "status": "PROVISIONING",
+              "region":"us-central1-a"
+            },
+            {
+              "name": "ci-messaging-activemq-3",
+              "status": "RUNNING",
+              "region":"us-central1-a"
+            }
+          ]
         }
  
 ## History Events [/events]

@@ -211,31 +211,77 @@ public class ManicMonkeyResource {
 		gen.writeStartObject();
 		gen.writeArrayFieldStart("results");
 		for (InstanceGroup group : groups) {
-			gen.writeStartObject();
-			gen.writeStringField("name", group.name());
-			gen.writeBooleanField("enabled", monkey.isGroupEnabled(group));
 
 			if (monkey.context().cloudClient() instanceof BasicClient) {
 				BasicClient client = (BasicClient) monkey.context().cloudClient();
-				gen.writeArrayFieldStart("instances");
 				for (Instance instance : client.list(group.name())) {
 					if (instance.getZone().equalsIgnoreCase(region)) {
 						gen.writeStartObject();
 						gen.writeStringField("name", instance.getName());
 						gen.writeStringField("status", instance.getStatus().toString());
 						gen.writeStringField("region", instance.getZone());
+						gen.writeStringField("group", group.name());
 						gen.writeEndObject();
 					}
 				}
-				gen.writeEndArray();
 			}
 
-			gen.writeEndObject();
 		}
 		gen.writeEndArray();
 		gen.writeEndObject();
 
 		gen.close();
+		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
+	}
+
+	@POST
+	@Path("/region/{region}/{action}")
+	public Response controlInstancesByRegion(@PathParam("region") String region,
+			@PathParam("action") InstanceAction action) throws IOException {
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		JsonGenerator gen = JSON_FACTORY.createJsonGenerator(baos, JsonEncoding.UTF8);
+
+		String chaosTypeName = null;
+		switch (action) {
+		case start:
+			chaosTypeName = "StartInstance";
+			break;
+		case stop:
+			chaosTypeName = "ShutdownInstance";
+			break;
+		default:
+			return Response.status(Response.Status.BAD_REQUEST).build();
+		}
+
+		ChaosType chaosType = ChaosType.parse(monkey.getChaosTypes(), chaosTypeName);
+
+		List<InstanceGroup> groups = monkey.context().chaosCrawler().groups();
+
+		gen.writeStartObject();
+		gen.writeArrayFieldStart("results");
+
+		for (InstanceGroup group : groups) {
+
+			if (monkey.context().cloudClient() instanceof BasicClient) {
+				BasicClient client = (BasicClient) monkey.context().cloudClient();
+				for (Instance instance : client.list(group.name())) {
+					if (instance.getZone().equalsIgnoreCase(region)) {
+						LOGGER.info("terminate:" + instance + "," + group + "," + region);
+						addTerminationEvent(BasicChaosCrawler.Types.TAG.name(), group.name(), chaosType,
+								instance.getName(), gen);
+
+					}
+				}
+			}
+
+		}
+
+		gen.writeEndArray();
+		gen.writeEndObject();
+		gen.close();
+		LOGGER.info("entity content is '{}'", baos.toString("UTF-8"));
+
 		return Response.status(Response.Status.OK).entity(baos.toString("UTF-8")).build();
 	}
 
