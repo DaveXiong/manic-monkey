@@ -309,19 +309,21 @@ instance.status can be one of
               "instance": "art-messaging-amq-5",
               "createdAt": 1479186913968,
               "group": "art-activemq",
-              "type": "StartInstance"
+              "type": "StartInstance"，
+              "region":"us-central1-a"
             },
             {
               "instance": "art-messaging-amq-5",
               "createdAt": 1479186827522,
               "group": "art-activemq",
-              "type": "ShutdownInstance"
+              "type": "ShutdownInstance"，
+              "region":"us-central1-a"
             }
         }
         
 ## Socket notification [/manic]
 
-Web Socket is enabled in server side, if any event on monkey or instance, notificaton will be sent to each client
+Web Socket is enabled in server side, if any event on monkey or instance, notification will be sent to each client
 
 Sample code:
 ```js

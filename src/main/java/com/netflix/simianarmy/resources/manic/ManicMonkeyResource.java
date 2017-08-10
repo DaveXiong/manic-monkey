@@ -189,6 +189,7 @@ public class ManicMonkeyResource {
 
 			gen.writeStringField("group", fields.getOrDefault("groupName", ""));
 			gen.writeStringField("type", fields.getOrDefault("chaosType", ""));
+			gen.writeStringField("region", fields.get("region"));
 
 			gen.writeEndObject();
 		}
