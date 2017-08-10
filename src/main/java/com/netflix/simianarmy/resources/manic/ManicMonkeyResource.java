@@ -57,6 +57,7 @@ import com.netflix.simianarmy.client.gcloud.BasicClient;
 import com.netflix.simianarmy.client.gcloud.Gce.Instance;
 import com.netflix.simianarmy.manic.Definitions;
 import com.netflix.simianarmy.manic.ManicChaosMonkey;
+import com.netflix.simianarmy.manic.ManicInstanceSelector;
 import com.sun.jersey.spi.resource.Singleton;
 
 /**
@@ -525,9 +526,9 @@ public class ManicMonkeyResource {
 		for (InstanceGroup group : monkey.context().chaosCrawler().groups(groupName)) {
 			if (monkey.isGroupEnabled(group)) {
 				List<String> instances = new ArrayList<String>();
-				instances.addAll(group.instances());
+				instances.addAll(new ManicInstanceSelector(monkey).selectAll(group, chaosType));
 				for (String instance : instances) {
-					System.out.println("terminate:" + instance + "," + group);
+					LOGGER.info("terminate:" + instance + "," + group);
 
 					addTerminationEvent(groupType, groupName, chaosType, instance, gen);
 				}
