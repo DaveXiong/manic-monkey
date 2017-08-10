@@ -3,8 +3,20 @@
  */
 package com.netflix.simianarmy.manic;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import com.netflix.simianarmy.EventType;
 import com.netflix.simianarmy.MonkeyConfiguration;
+import com.netflix.simianarmy.MonkeyType;
 import com.netflix.simianarmy.aws.RDSRecorder;
+import com.netflix.simianarmy.aws.SimpleDBRecorder;
 import com.netflix.simianarmy.chaos.ChaosMonkey;
 import com.netflix.simianarmy.client.gcloud.Definitions;
 import com.netflix.simianarmy.client.gcloud.Gce;
@@ -79,5 +91,36 @@ public class ManicEventRecorder extends RDSRecorder {
 		MonkeyEventDispatcher.INSTANCE.dispatch(toManicEvent(evt));
 		super.recordEvent(evt);
 	}
+	
+	   public List<Event> findEvents(MonkeyType monkeyType, EventType eventType, Map<String, String> query, Date after) {
+	        ArrayList<Object> args = new ArrayList<>();
+	        StringBuilder sqlquery = new StringBuilder(
+	                String.format("select * from %s where ", this.getTable()));
+	        
+	        if (monkeyType != null) {
+	        	sqlquery.append(String.format(" %s = ?", FIELD_MONKEY_TYPE));
+	        	args.add(SimpleDBRecorder.enumToValue(monkeyType));
+	        }
+
+	        if (eventType != null) {
+	        	sqlquery.append(String.format(" and %s = ?", FIELD_EVENT_TYPE));
+	        	args.add(SimpleDBRecorder.enumToValue(eventType));
+	        }
+	        
+	        for (Map.Entry<String, String> pair : query.entrySet()) {
+	        	sqlquery.append(String.format(" and %s like ?", FIELD_DATA_JSON));
+	            args.add((String.format("%s: \"%s\"", pair.getKey(), pair.getValue())));
+	        }
+	        sqlquery.append(String.format(" and %s > ? order by %s desc", FIELD_EVENT_TIME, FIELD_EVENT_TIME));
+	        args.add(new Long(after.getTime()));
+	        
+	        LOGGER.info(String.format("Query is '%s'", sqlquery));
+	        List<Event> events = this.getJdbcTemplate().query(sqlquery.toString(), args.toArray(), new RowMapper<Event>() {
+	            public Event mapRow(ResultSet rs, int rowNum) throws SQLException {
+	            	return mapEvent(rs);                
+	            }             
+	        });                
+	        return events;
+	    }
 
 }

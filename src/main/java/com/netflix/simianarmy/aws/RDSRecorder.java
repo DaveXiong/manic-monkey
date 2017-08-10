@@ -42,10 +42,9 @@ import java.util.Map;
 /**
  * The Class RDSRecorder. Records events to and fetched events from a RDS table (default SIMIAN_ARMY)
  */
-@SuppressWarnings("serial")
 public class RDSRecorder implements MonkeyRecorder {
     /** The Constant LOGGER. */
-    private static final Logger LOGGER = LoggerFactory.getLogger(RDSRecorder.class);
+    protected static final Logger LOGGER = LoggerFactory.getLogger(RDSRecorder.class);
 
     private final String region;
 
@@ -92,6 +91,10 @@ public class RDSRecorder implements MonkeyRecorder {
     
     public JdbcTemplate getJdbcTemplate() {
 		return jdbcTemplate;
+	}
+    
+	public String getTable() {
+		return this.table;
 	}
 
     /** {@inheritDoc} */
@@ -181,7 +184,7 @@ public class RDSRecorder implements MonkeyRecorder {
         return events;
     }
     
-    private Event mapEvent(ResultSet rs) throws SQLException {
+    protected Event mapEvent(ResultSet rs) throws SQLException {
     	String json = rs.getString("dataJson");
     	ObjectMapper mapper = new ObjectMapper();
     	Event event = null;
