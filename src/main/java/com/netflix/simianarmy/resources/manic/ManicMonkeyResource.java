@@ -573,7 +573,7 @@ public class ManicMonkeyResource {
 		LOGGER.info("Running on-demand termination for instance group type '{}' and name '{}'", groupType, groupName);
 		for (InstanceGroup group : monkey.context().chaosCrawler().groups(groupName)) {
 			if(!group.name().equalsIgnoreCase(groupName)) {
-				break;
+				continue;
 			}
 			
 			if (monkey.isGroupEnabled(group)) {
