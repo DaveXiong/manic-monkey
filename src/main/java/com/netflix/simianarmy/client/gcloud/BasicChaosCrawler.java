@@ -67,7 +67,9 @@ public class BasicChaosCrawler implements ChaosCrawler {
 				if (groupNames.isEmpty() || groupNames.contains(group.name())) {
 					try {
 						for (Instance instance : client.list(group.name())) {
-							group.addInstance(instance.getName());
+							if (!group.instances().contains(instance.getName())) {
+								group.addInstance(instance.getName());
+							}
 						}
 					} catch (IOException ex) {
 						LOGGER.error(ex.getMessage());

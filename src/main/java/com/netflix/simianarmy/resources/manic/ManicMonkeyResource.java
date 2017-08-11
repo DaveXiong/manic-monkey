@@ -19,12 +19,13 @@ package com.netflix.simianarmy.resources.manic;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -571,8 +572,12 @@ public class ManicMonkeyResource {
 			JsonGenerator gen) throws IOException {
 		LOGGER.info("Running on-demand termination for instance group type '{}' and name '{}'", groupType, groupName);
 		for (InstanceGroup group : monkey.context().chaosCrawler().groups(groupName)) {
+			if(!group.name().equalsIgnoreCase(groupName)) {
+				break;
+			}
+			
 			if (monkey.isGroupEnabled(group)) {
-				List<String> instances = new ArrayList<String>();
+				Set<String> instances = new HashSet<String>();
 				instances.addAll(new ManicInstanceSelector(monkey).selectAll(group, chaosType));
 				for (String instance : instances) {
 					LOGGER.info("terminate:" + instance + "," + group);
