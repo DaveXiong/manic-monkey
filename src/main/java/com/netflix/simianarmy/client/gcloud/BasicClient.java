@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import com.netflix.simianarmy.CloudClient;
 import com.netflix.simianarmy.MonkeyConfiguration;
 import com.netflix.simianarmy.NotFoundException;
-import com.netflix.simianarmy.client.aws.AWSClient;
 
 /**
  * @author dxiong
@@ -24,7 +23,7 @@ import com.netflix.simianarmy.client.aws.AWSClient;
 public class BasicClient extends Gce implements CloudClient {
 
 	/** The Constant LOGGER. */
-	private static final Logger LOGGER = LoggerFactory.getLogger(AWSClient.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BasicClient.class);
 
 	public BasicClient(MonkeyConfiguration configuration) throws Exception {
 		super(configuration.getStr(Definitions.GCloud.CRENDENTIAL), configuration.getStr(Definitions.GCloud.PROJECT),

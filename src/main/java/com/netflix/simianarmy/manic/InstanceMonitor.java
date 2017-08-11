@@ -89,6 +89,7 @@ public class InstanceMonitor implements Runnable {
 		}
 
 		LOGGER.info("all enabled groups:" + tags);
+		LOGGER.info("tag2Instances:"+group2Instances);
 
 		return group2Instances;
 	}
