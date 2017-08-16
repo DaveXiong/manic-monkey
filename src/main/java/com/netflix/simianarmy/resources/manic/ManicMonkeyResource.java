@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import com.netflix.simianarmy.FeatureNotEnabledException;
 import com.netflix.simianarmy.InstanceGroupNotFoundException;
 import com.netflix.simianarmy.Monkey;
+import com.netflix.simianarmy.MonkeyCalendar;
 import com.netflix.simianarmy.MonkeyRecorder.Event;
 import com.netflix.simianarmy.MonkeyRunner;
 import com.netflix.simianarmy.NotFoundException;
@@ -117,6 +118,24 @@ public class ManicMonkeyResource {
 		long now = System.currentTimeMillis();
 		gen.writeNumberField("now", now);
 		gen.writeNumberField("uptime", now - Definitions.UP_AT);
+
+		MonkeyCalendar calendar = monkey.getMonkeyCalendar();
+		gen.writeFieldName("time");
+		gen.writeStartObject();
+		gen.writeNumberField("from", calendar.openHour());
+		gen.writeNumberField("to", calendar.closeHour());
+		gen.writeStringField("timezone", calendar.timezone());
+		gen.writeNumberField("frequency",
+				monkey.context().configuration().getNumOrElse(
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE,
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_DEFAULT));
+		gen.writeStringField("frequencyUnit",
+				monkey.context().configuration().getStrOrElse(
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT,
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT_DEFAULT));
+
+		gen.writeEndObject();
+
 		gen.writeArrayFieldStart("actions");
 		for (ChaosType type : monkey.getChaosTypes()) {
 			gen.writeStartObject();
@@ -436,6 +455,23 @@ public class ManicMonkeyResource {
 		gen.writeNumberField("now", now);
 		gen.writeNumberField("uptime", now - Definitions.UP_AT);
 
+		
+		MonkeyCalendar calendar = monkey.getMonkeyCalendar();
+		gen.writeFieldName("time");
+		gen.writeStartObject();
+		gen.writeNumberField("from", calendar.openHour());
+		gen.writeNumberField("to", calendar.closeHour());
+		gen.writeStringField("timezone", calendar.timezone());
+		gen.writeNumberField("frequency",
+				monkey.context().configuration().getNumOrElse(
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE,
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_DEFAULT));
+		gen.writeStringField("frequencyUnit",
+				monkey.context().configuration().getStrOrElse(
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT,
+						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT_DEFAULT));
+		gen.writeEndObject();
+		
 		gen.writeEndObject();
 
 		gen.close();
@@ -572,10 +608,10 @@ public class ManicMonkeyResource {
 			JsonGenerator gen) throws IOException {
 		LOGGER.info("Running on-demand termination for instance group type '{}' and name '{}'", groupType, groupName);
 		for (InstanceGroup group : monkey.context().chaosCrawler().groups(groupName)) {
-			if(!group.name().equalsIgnoreCase(groupName)) {
+			if (!group.name().equalsIgnoreCase(groupName)) {
 				continue;
 			}
-			
+
 			if (monkey.isGroupEnabled(group)) {
 				Set<String> instances = new HashSet<String>();
 				instances.addAll(new ManicInstanceSelector(monkey).selectAll(group, chaosType));

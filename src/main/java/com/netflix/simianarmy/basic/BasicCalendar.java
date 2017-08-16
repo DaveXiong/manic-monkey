@@ -41,10 +41,10 @@ public class BasicCalendar implements MonkeyCalendar {
     private static final Logger LOGGER = LoggerFactory.getLogger(BasicCalendar.class);
 
     /** The open hour. */
-    private final int openHour;
+    private int openHour;
 
     /** The close hour. */
-    private final int closeHour;
+    private int closeHour;
 
     /** The tz. */
     private final TimeZone tz;
@@ -107,12 +107,26 @@ public class BasicCalendar implements MonkeyCalendar {
         return openHour;
     }
 
+    public BasicCalendar withOpenHour(int openHour) {
+    	this.openHour = openHour;
+    	return this;
+    }
     /** {@inheritDoc} */
     @Override
     public int closeHour() {
         return closeHour;
     }
+    
+    
+    public BasicCalendar withCloseHour(int closeHour) {
+    	this.closeHour = closeHour;
+    	return this;
+    }
 
+    
+    public String timezone() {
+    	return tz.getID();
+    }
     /** {@inheritDoc} */
     @Override
     public Calendar now() {
