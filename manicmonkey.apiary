@@ -131,9 +131,9 @@ monkey.enabled = true means the monkey is running random in the backgroud, other
           "uptime": 51797,
           "time": {
 	          "from": 9,
-	          "to": 23,
+	          "to": 15,
 	          "timezone": "America/Los_Angeles",
-	          "frequency": 1,
+	          "frequency": 10,
 	          "frequencyUnit": "MINUTES"
 	      }
         }
