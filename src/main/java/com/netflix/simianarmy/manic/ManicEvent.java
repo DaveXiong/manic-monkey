@@ -20,7 +20,8 @@ public class ManicEvent {
 		STOP,
 		PAUSE,
 		RESUME,
-		STATUS_UPDATE
+		STATUS_UPDATE,
+		CONFIG
 	}
 	private Type type;
 	private Command event;

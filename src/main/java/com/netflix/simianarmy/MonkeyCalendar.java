@@ -48,6 +48,13 @@ public interface MonkeyCalendar {
      * @return the int
      */
     int closeHour();
+    
+    
+    String timezone();
+    
+    MonkeyCalendar withOpenHour(int openHour);
+    
+    MonkeyCalendar withCloseHour(int closeHour);
 
     /**
      * Get the current time using whatever timezone is used for monkey date calculations.

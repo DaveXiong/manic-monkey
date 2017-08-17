@@ -49,7 +49,7 @@ public class BasicChaosMonkey extends ChaosMonkey {
     /** The minimum value of the maxTerminationCountPerday property to be considered non-zero. **/
     private static final double MIN_MAX_TERMINATION_COUNT_PER_DAY = 0.001;
 
-    private final MonkeyCalendar monkeyCalendar;
+    protected final MonkeyCalendar monkeyCalendar;
 
     // When a mandatory termination is triggered due to the minimum termination limit is breached,
     // the value below is used as the termination probability.

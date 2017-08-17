@@ -30,6 +30,13 @@ monkey.enabled = true means the monkey is running random in the backgroud, other
           "enabled": false,
           "now": 1478049022273,
           "uptime": 15489,
+          "time": {
+	          "from": 9,
+	          "to": 23,
+	          "timezone": "America/Los_Angeles",
+	          "frequency": 1,
+	          "frequencyUnit": "MINUTES"
+	      },
           "actions": [
             {
               "name": "BlockAllNetworkTraffic",
@@ -102,6 +109,35 @@ monkey.enabled = true means the monkey is running random in the backgroud, other
     	  ]
         }
 
+## Monkey Configuration [/config]
+
+  configure the monkey random mode start and end time , and the frequency (minutes) to schedule the random mode 
+### Configure monkey [POST]
+
+   
++ Request (application/json)
+        {
+          "from":9,
+          "to": 15,
+          "frequency":10
+        }
+        
++ Response 200 (application/json)
+
+        {
+          "version": "0.0.1",
+          "enabled": false,
+          "now": 1478049058581,
+          "uptime": 51797,
+          "time": {
+	          "from": 9,
+	          "to": 15,
+	          "timezone": "America/Los_Angeles",
+	          "frequency": 10,
+	          "frequencyUnit": "MINUTES"
+	      }
+        }
+        
 ## Monkey management [/{action}(pause|resume)]
 - Parameters
   - action (string `pause`) ... pause the monkey
@@ -116,7 +152,14 @@ monkey.enabled = true means the monkey is running random in the backgroud, other
           "version": "0.0.1",
           "enabled": false,
           "now": 1478049058581,
-          "uptime": 51797
+          "uptime": 51797,
+          "time": {
+	          "from": 9,
+	          "to": 23,
+	          "timezone": "America/Los_Angeles",
+	          "frequency": 1,
+	          "frequencyUnit": "MINUTES"
+	      },
         }
 
 ## Instance group [/group]

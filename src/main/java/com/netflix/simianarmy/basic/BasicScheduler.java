@@ -124,4 +124,16 @@ public class BasicScheduler implements MonkeyScheduler {
             futures.remove(monkey.type().name()).cancel(true);
         }
     }
+
+	@Override
+	public MonkeyScheduler withFrequency(int frequency) {
+		this.frequency = frequency;
+		return this;
+	}
+
+	@Override
+	public MonkeyScheduler withFrequencyUnit(TimeUnit unit) {
+		this.frequencyUnit = unit;
+		return this;
+	}
 }
