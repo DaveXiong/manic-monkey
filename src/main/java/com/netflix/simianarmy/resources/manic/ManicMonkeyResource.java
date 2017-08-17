@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -39,7 +40,9 @@ import javax.ws.rs.core.UriInfo;
 
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.MappingJsonFactory;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +62,7 @@ import com.netflix.simianarmy.client.gcloud.BasicClient;
 import com.netflix.simianarmy.client.gcloud.Gce.Instance;
 import com.netflix.simianarmy.manic.Definitions;
 import com.netflix.simianarmy.manic.ManicChaosMonkey;
+import com.netflix.simianarmy.manic.ManicEvent;
 import com.netflix.simianarmy.manic.ManicInstanceSelector;
 import com.sun.jersey.spi.resource.Singleton;
 
@@ -106,6 +110,39 @@ public class ManicMonkeyResource {
 		}
 	}
 
+	@POST
+	@Path("/config")
+	public Response configure(String config) throws IOException {
+		ObjectMapper mapper = new ObjectMapper();
+		LOGGER.info(String.format("Config content: '%s'", config));
+		JsonNode input = mapper.readTree(config);
+
+		Integer from = getIntField(input, "from");
+		Integer to = getIntField(input, "to");
+		Integer frequency = getIntField(input, "frequency");
+
+		MonkeyCalendar calendar = monkey.getMonkeyCalendar();
+
+		if (from != null) {
+			calendar.withOpenHour(from);
+		}
+
+		if (to != null) {
+			calendar.withCloseHour(to);
+		}
+
+		if (frequency != null) {
+			Monkey.Context context = (Monkey.Context) monkey.context();
+			context.scheduler().withFrequency(frequency).withFrequencyUnit(TimeUnit.MINUTES);
+			
+			monkey.stop();
+			monkey.start();
+		}
+		monkey.getSlack().onEvent(new ManicEvent(ManicEvent.Type.MONKEY, ManicEvent.Command.CONFIG));
+
+		return getHeartBeat();
+	}
+
 	@GET
 	public Response getHeartBeat() throws IOException {
 
@@ -125,14 +162,10 @@ public class ManicMonkeyResource {
 		gen.writeNumberField("from", calendar.openHour());
 		gen.writeNumberField("to", calendar.closeHour());
 		gen.writeStringField("timezone", calendar.timezone());
-		gen.writeNumberField("frequency",
-				monkey.context().configuration().getNumOrElse(
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE,
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_DEFAULT));
-		gen.writeStringField("frequencyUnit",
-				monkey.context().configuration().getStrOrElse(
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT,
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT_DEFAULT));
+		
+		Monkey.Context context = (Monkey.Context) monkey.context();
+		gen.writeNumberField("frequency",context.scheduler().frequency());
+		gen.writeStringField("frequencyUnit",context.scheduler().frequencyUnit().name());
 
 		gen.writeEndObject();
 
@@ -455,23 +488,17 @@ public class ManicMonkeyResource {
 		gen.writeNumberField("now", now);
 		gen.writeNumberField("uptime", now - Definitions.UP_AT);
 
-		
 		MonkeyCalendar calendar = monkey.getMonkeyCalendar();
 		gen.writeFieldName("time");
 		gen.writeStartObject();
 		gen.writeNumberField("from", calendar.openHour());
 		gen.writeNumberField("to", calendar.closeHour());
 		gen.writeStringField("timezone", calendar.timezone());
-		gen.writeNumberField("frequency",
-				monkey.context().configuration().getNumOrElse(
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE,
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_DEFAULT));
-		gen.writeStringField("frequencyUnit",
-				monkey.context().configuration().getStrOrElse(
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT,
-						com.netflix.simianarmy.client.gcloud.Definitions.Scheduler.FREQUEUE_UNIT_DEFAULT));
+		Monkey.Context context = (Monkey.Context) monkey.context();
+		gen.writeNumberField("frequency",context.scheduler().frequency());
+		gen.writeStringField("frequencyUnit",context.scheduler().frequencyUnit().name());
 		gen.writeEndObject();
-		
+
 		gen.writeEndObject();
 
 		gen.close();
@@ -625,5 +652,13 @@ public class ManicMonkeyResource {
 
 		LOGGER.info("On-demand termination completed.");
 		return Response.Status.OK;
+	}
+
+	private Integer getIntField(JsonNode input, String field) {
+		JsonNode node = input.get(field);
+		if (node == null) {
+			return null;
+		}
+		return node.getIntValue();
 	}
 }

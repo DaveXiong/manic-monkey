@@ -38,6 +38,10 @@ public interface MonkeyScheduler {
      * @return time unit
      */
     TimeUnit frequencyUnit();
+    
+    MonkeyScheduler withFrequency(int frequency);
+    
+    MonkeyScheduler withFrequencyUnit(TimeUnit unit);
 
     /**
      * Start the scheduler to cause the monkey run at a specified interval.

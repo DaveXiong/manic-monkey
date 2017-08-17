@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.netflix.simianarmy.Monkey;
 import com.netflix.simianarmy.client.gcloud.Definitions;
 import com.netflix.simianarmy.manic.ManicEvent.Command;
 import com.netflix.simianarmy.manic.ManicEvent.InstancePayload;
@@ -89,6 +90,9 @@ public class Slack implements EventListener {
 		case RESUME:
 			message.setText("Monkey has been resumed");
 			break;
+		case CONFIG:
+			message.setText("Monkey has been configured");
+			break;
 		default:
 			message.setText(evt.getCommand().toString());
 		}
@@ -109,6 +113,16 @@ public class Slack implements EventListener {
 		field.setValue((monkey == null || monkey.isPaused()) ? "false" : "true");
 
 		fields.add(field);
+		
+		field = new AttachmentField();
+		field.setShortText(true);
+		field.setTitle("workHours");
+		
+		String workingHours = String.format("%d-%d %s", monkey.getMonkeyCalendar().openHour(),monkey.getMonkeyCalendar().closeHour(),monkey.getMonkeyCalendar().timezone());
+		field.setValue(workingHours);
+
+		fields.add(field);
+		
 
 		field = new AttachmentField();
 		field.setShortText(true);
@@ -128,10 +142,8 @@ public class Slack implements EventListener {
 		field = new AttachmentField();
 		field.setShortText(true);
 		field.setTitle("Schedule");
-		String schedule = monkey.context().configuration().getNumOrElse(Definitions.Scheduler.FREQUEUE,
-				Definitions.Scheduler.FREQUEUE_DEFAULT) + " "
-				+ monkey.context().configuration().getStrOrElse(Definitions.Scheduler.FREQUEUE_UNIT,
-						Definitions.Scheduler.FREQUEUE_UNIT_DEFAULT);
+		Monkey.Context context = (Monkey.Context) monkey.context();
+		String schedule = context.scheduler().frequency()+" "+ context.scheduler().frequencyUnit();
 		field.setValue(schedule);
 
 		fields.add(field);
